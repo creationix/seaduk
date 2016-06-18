@@ -1,2 +1,6 @@
-# Python compiled files
-*.pyc
+nucleus
+*.o
+app
+app.zip
+app-tiny
+prefix

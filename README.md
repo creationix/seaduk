@@ -1,78 +1,48 @@
-# Nucleus
-> a minimal platform-agnostic JS runtime
+This folder is a concrete implementation of the Nucleus interface using DukTape as the JavaScript engine.
 
-Nucleus is a specification for a minimal JS runtime that makes it fun to create
-your own platforms.
+It's tested regularly on Linux and OSX.
 
-## Up and Running
+## Status
 
-To get up and running with Nucleus implementations, check out the [implementations]
-directory. The [duktape `README`] is a great place to start.
+Currently this port is still im progress, but there is enough to already start
+writing userland modules that use the `nucleus` global and parts of libuv.
 
-[implementations]: implementations
-[duktape `README`]: implementations/duktape/README.md
+## Building
 
-## Running the tests
+I'm currently using a `Makefile` to script building.  The libuv submodule
+requires `automake` and `libtool` installed (via apt-get, homebrew, etc...).
 
-The test suite can be found in `test`, and can be run with
-`make test-<implementation>`, e.g. `make test-duktape`.
-
-## Command Line Interface
+Also make sure to include all submodules when cloning nucleus.
 
 ```sh
-# Show version and build options
-nucleus --version
-
-# Run an app from a tree in the filesystem.
-nucleus app-src -- args...
-# Run an app from a zip bundle.
-nucleus app.zip -- args...
-
-# Manually build a standalone binary with nucleus embedded.
-cat /usr/local/bin/nucleus app.zip > app
-chmod +x app
-./app args...
-
-# Manually build a standalone binary that links to system nucleus.
-echo "#!/usr/local/bin/nucleus" > prefix
-cat prefix app.zip > app
-chmod + x app
-./app args...
-
-# Build app with linked nucleus in shebang
-nucleus app.zip --linked --output app
+# Clone recursivly to get all submodules
+git clone --recursive https://github.com/creationix/nucleus.git
+# Go to this folder
+cd nucleus/implementations/duktape
+# Build using 4 parallel cores
+make -j4
+# Optionally run all the tests.
+make test
 ```
 
-## Basic Application Skeleton
+When you're done building the `nucleus` binary can be used to run and build your
+own tiny JS scripts.
 
-This is a sample application that's using a node.js style require system.
+## Testing
 
-```
-app
-├── main.js
-└── node_modules
-    └── node-core
-        ├── bootstrap.js
-        .
-        .
-        .
-```
+Run `make -j4 test`. It will also attempt (re)build if you have not already.
 
-The only thing special is there must be an `main.js` at the root of the tree.  
-This file will be run in the JS runtime with a global `nucleus` injected.
+Additionally, there are some manually verified tests. To run these, use
+`make test-manual`.
 
-```js
-// main.js
-// Bootstrap the node environment with the dofile builtin.
-nucleus.dofile('node_modules/node-core/bootstrap.js')(function (require, module) {
-  // node code goes here
-});
-```
+## Optimizing for Size
 
-## JS `nucleus` Interface
+By default the Makefile builds in debug mode with `-g`.  If you want a tiny
+binary modify the Makefile to have `CC= cc -Os`.  If you've done a build before,
+make sure to run `make distclean` before trying a new build.
 
-This global is the only thing custom injected into the JavaScript global scope.
-It provides access to all the C bindings in nucleus as well as some utility
-functions to work with the bundle resources and the JS runtime.
+If you want a small static binary on linux using musl, install musl-tools on
+your ubuntu system and set `CC= musl-gcc -Os -static` and rebuild.
 
-You can see full API docs for this in [api/nucleus.md](./api/nucleus.md).
+For maximum smallness (especially with the static build), `strip` your nucleus
+binary before appending the app zip to it.

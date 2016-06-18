@@ -1,9 +1,6 @@
-[submodule "implementations/duktape/duktape-releases"]
-	path = implementations/duktape/duktape-releases
-	url = https://github.com/svaarala/duktape-releases.git
-[submodule "implementations/jerryscript/jerryscript"]
-	path = implementations/jerryscript/jerryscript
-	url = https://github.com/Samsung/jerryscript.git
-[submodule "deps/libuv"]
-	path = deps/libuv
+[submodule "src/libuv"]
+	path = src/libuv
 	url = https://github.com/libuv/libuv.git
+[submodule "src/duktape-releases"]
+	path = src/duktape-releases
+	url = https://github.com/svaarala/duktape-releases.git
