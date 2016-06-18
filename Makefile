@@ -1,4 +1,4 @@
-LIBUV= ../../deps/libuv
+LIBUV= deps/libuv
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
@@ -8,24 +8,30 @@ CC= cc -g
 # Uncomment the following to make a static musl binary on linux
 # CC= musl-gcc -Os -static
 
-nucleus: main.o miniz.o duktape.o duv/duv.a ${LIBUV}/.libs/libuv.a env.o rust_path/target/release/libc_path.a
-	${CC} $^ -lm -lpthread -o $@ rust_path/target/release/libc_path.a -ldl
+LIBS=\
+  target/main.o\
+	target/miniz.o\
+	target/duktape.o\
+	target/duv.a\
+	target/libuv.a\
+	target/env.o\
+	rust_path/target/release/libc_path.a
+
+target/nucleus: ${LIBS}
+	${CC} $^ -lm -lpthread -ldl -o $@
 
 rust_path/target/release/libc_path.a: rust_path/src/lib.rs rust_path/src/helpers.rs
 	cd rust_path && cargo build --release
 
-install: nucleus
-	install nucleus /usr/local/bin/
+install: target/nucleus
+	install $< /usr/local/bin/
 
-test:
-	make -C ../.. test-duktape
+test: test-dir test-zip test-app test-app-tiny
 
-test-manual: test-dir test-zip test-app test-app-tiny
+test-dir: target/nucleus
+	$< test-app -- 1 2 3
 
-test-dir: nucleus
-	./nucleus ../../test/manual -- 1 2 3
-
-test-zip: nucleus app.zip
+test-zip: target/nucleus target/test-app.zip
 	./nucleus app.zip -- 4 5 6
 
 test-app: app
@@ -45,16 +51,27 @@ app-tiny: app.zip prefix
 prefix: nucleus
 	echo "#!$(shell pwd)/nucleus --" > prefix
 
-app.zip: ../../test/manual/* ../../test/manual/deps/*
+target/test-app.zip: test-app/* test-app/deps/*
 	rm -f app.zip
-	cd ../../test/manual; zip -9 -r ../../implementations/duktape/app.zip .; cd -
+	cd test-app; zip -9 -r ../$@ .; cd -
 
-env.o: env.c env.h
+target/env.o: src/env.c src/env.h
 	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
-main.o: main.c *.h
+target/main.o: src/main.c src/*.h
 	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
+target/duv.a: src/duv/*.c src/duv/*.h
+	${MAKE} -C duv
+
+target/duktape.o: duktape-releases/src/duktape.c duktape-releases/src/duktape.h
+	${CC} -std=c99 -Wall -Wextra -pedantic -c $< -o $@
+
+target/miniz.o: deps/miniz.c
+	${CC} -std=gnu99 -c $< -o $@
+
+target/libuv.a: ${LIBUV}/.libs/libuv.a
+	cp $< $@
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
@@ -65,18 +82,9 @@ ${LIBUV}/Makefile: ${LIBUV}/configure
 ${LIBUV}/configure: ${LIBUV}/autogen.sh
 	cd ${LIBUV}; ./autogen.sh; cd -
 
-duv/duv.a: duv/*.c duv/*.h
-	${MAKE} -C duv
-
-duktape.o: duktape-releases/src/duktape.c duktape-releases/src/duktape.h
-	${CC} -std=c99 -Wall -Wextra -pedantic -c $< -o $@
-
-miniz.o: ../../deps/miniz.c
-	${CC} -std=gnu99 -c $< -o $@
-
 clean:
 	rm -rf nucleus *.o app.zip app prefix app-tiny rust_path/target
-	${MAKE} -C duv clean
+	${MAKE} -C src/duv clean
 
 distclean: clean
 	cd ${LIBUV}; git clean -xdf; cd -

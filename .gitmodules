@@ -1,6 +1,6 @@
-[submodule "src/libuv"]
-	path = src/libuv
+[submodule "deps/libuv"]
+	path = deps/libuv
 	url = https://github.com/libuv/libuv.git
-[submodule "src/duktape-releases"]
-	path = src/duktape-releases
+[submodule "deps/duktape-releases"]
+	path = deps/duktape-releases
 	url = https://github.com/svaarala/duktape-releases.git
