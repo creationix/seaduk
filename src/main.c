@@ -11,9 +11,9 @@
 #include <errno.h>
 #include "rust-path.h"
 
-#include "duktape-releases/src/duktape.h"
+#include "../deps/duktape-releases/src/duktape.h"
 #define MINIZ_HEADER_FILE_ONLY
-#include "../../deps/miniz.c"
+#include "../deps/miniz.c"
 #include "duv/duv.h"
 #include "env.h"
 

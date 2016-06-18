@@ -61,10 +61,13 @@ target/env.o: src/env.c src/env.h
 target/main.o: src/main.c src/*.h
 	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
-target/duv.a: src/duv/*.c src/duv/*.h
-	${MAKE} -C duv
+target/duv.a: src/duv/duv.a
+	cp $< $@
 
-target/duktape.o: duktape-releases/src/duktape.c duktape-releases/src/duktape.h
+src/duv/duv.a: src/duv/*.c src/duv/*.h
+	${MAKE} -C src/duv
+
+target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
 	${CC} -std=c99 -Wall -Wextra -pedantic -c $< -o $@
 
 target/miniz.o: deps/miniz.c

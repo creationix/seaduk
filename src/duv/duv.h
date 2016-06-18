@@ -1,8 +1,8 @@
 #ifndef DUV_H
 #define DUV_H
 
-#include "../../../deps/libuv/include/uv.h"
-#include "../duktape-releases/src/duktape.h"
+#include "../../deps/libuv/include/uv.h"
+#include "../../deps/duktape-releases/src/duktape.h"
 
 typedef enum {
   DUV_TIMER,
