@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "rust-path.h"
+#include "path.h"
 
 #include "../deps/duktape-releases/src/duktape.h"
 #define MINIZ_HEADER_FILE_ONLY
@@ -34,12 +34,16 @@ static struct {
 
 
 static duk_ret_t duv_path_join(duk_context *ctx) {
-  const char* result = duk_get_string(ctx, 0);
+  const char* old = duk_get_string(ctx, 0);
+  char* result = NULL;
   for (int i = 1; i < duk_get_top(ctx); i++) {
     const char* str = duk_get_string(ctx, i);
-    result = rust_join(result, str);
+    result = (char*)path_join(old, str);
+    free(result);
+    old = result;
   }
   duk_push_string(ctx, result);
+  free(result);
   return 1;
 }
 
@@ -480,10 +484,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   printf("base='%s'\n", base);
-  const char* ext = rust_extension(base);
+  const char* ext = path_extension(base);
   if (ext && !strcmp(ext, "js")) {
-    entry = rust_filename(base);
-    base = (char*)rust_dirname(base);
+    entry = path_filename(base);
+    base = (char*)path_dirname(base);
   }
   printf("ext='%s' entry='%s' base='%s'\n", ext, entry, base);
 

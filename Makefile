@@ -15,7 +15,7 @@ LIBS=\
 	target/duv.a\
 	target/libuv.a\
 	target/env.o\
-	rust_path/target/release/libc_path.a
+	target/path.o
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -45,9 +45,6 @@ DUV_LIBS=\
 
 target/nucleus: ${LIBS}
 	${CC} $^ -lm -lpthread -ldl -o $@
-
-rust_path/target/release/libc_path.a: rust_path/src/lib.rs rust_path/src/helpers.rs
-	cd rust_path && cargo build --release
 
 install: target/nucleus
 	install $< /usr/local/bin/
@@ -84,6 +81,9 @@ target/test-app.zip: test-app/* test-app/deps/*
 target/env.o: src/env.c src/env.h
 	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
+target/path.o: src/path.c src/path.h
+	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+
 target/main.o: src/main.c src/*.h
 	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
@@ -115,7 +115,7 @@ ${LIBUV}/configure: ${LIBUV}/autogen.sh
 	cd ${LIBUV}; ./autogen.sh; cd -
 
 clean:
-	rm -rf target/* rust_path/target
+	rm -rf target/*
 
 distclean: clean
 	cd ${LIBUV}; git clean -xdf; cd -
