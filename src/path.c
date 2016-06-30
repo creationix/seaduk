@@ -1,6 +1,6 @@
 #include "path.h"
 #include <string.h>
-
+#include <stdio.h>
 
 path_t path_cstr(const char* str) {
   path_t result;
@@ -9,77 +9,123 @@ path_t path_cstr(const char* str) {
   return result;
 }
 
-typedef enum {
-  EMPTY,
-  START,
-  NORMAL,
-  ONEDOT,
-  TWODOT,
-} path_parse_state_t;
+int path_add(mpath_t *base, path_t path) {
+  // Do nothing if both are empty.
+  if (base->len == 0 && path.len == 0) return 0;
 
-
-static void path_pop(mpath_t *base) {
-  // Ignore empty paths
-  if (!base->len) return;
-  
-}
-
-void path_add(mpath_t *base, path_t path) {
-  // If the new segment is empty, ignore it.
-  if (!path.len) return;
-
-  // If the base is empty and the segment is absolute, insert leading slash
-  // Or if the base does not end in slash, add one as separator
-  if (base->len ? base->data[base->len - 1] != '/' : path.data[0] == '/') {
-    base->data[base->len++] = '/';
+  // If the base is empty and the path is absolute, preserve leading slash
+  if (base->len == 0 && base->max > 0 && path.len > 0 && path.data[0] == '/') {
+    base->data[0] = '/';
+    base->len = 1;
   }
 
-  // Run the new segment through the state machine.
-  path_parse_state_t state = START;
-  for (unsigned int i = 0; i < path.len && base->len < base->max; i++) {
-    char next = path.data[i];
-    switch (state) {
-      case START:
-        if (next == '/') {
-          continue;
-        }
-      case EMPTY:
-        if (next == '.') {
-          state = ONEDOT;
-        }
-        else {
-          state = NORMAL;
-        }
-        break;
-      break;
-      case NORMAL:
-        if (next == '/') state = START;
-      break;
-      case ONEDOT:
-        if (next == '.') state = TWODOT;
-        else if (next == '/') {
-          state = START;
-          base->len -= 1;
-          continue;
-        }
-        else state = NORMAL;
-      break;
-      case TWODOT:
-        if (next == '/') {
-          if (base->len >= 3) {
-            base->len -= 3;
-            while (base->len && base->data[--base->len] != '/');
-            state = START;
-          }
-          else {
-            base->len = 0;
-          }
-          continue;
-        }
-      break;
+  // Remove any trailing slash in base if there is path
+  if (path.len > 0 && base->len > 1 && base->data[base->len - 1] == '/') {
+    base->len--;
+  }
+
+  // If the base is exactly '.', truncate it.
+  if (base->len == 1 && base->data[0] == '.') {
+    base->len = 0;
+  }
+
+  unsigned int i = 0;
+  for (;;) {
+    // Skip any leading slashes in the path
+    while (i < path.len && path.data[i] == '/') i++;
+
+    // Find the next slash (or end of string);
+    unsigned j = i;
+    while (j < path.len && path.data[j] != '/') j++;
+
+    // Match end of segment
+    if (j == i) break;
+
+    path_t segment = {
+      .data = path.data + i,
+      .len = j - i
+    };
+
+    // Skip '.' segments
+    if (segment.len == 1 && segment.data[0] == '.') {
+      i = j;
+      continue;
     }
-    base->data[base->len++] = next;
+
+    // Match '..' segment
+    if (j - i == 2 && path.data[i] == '.' && path.data[i + 1] == '.') {
+      // If this is an empty path, preserve the '..'
+      if (base->len == 0) {
+        if (base->max < 2) return -1;
+        base->data[0] = '.';
+        base->data[1] = '.';
+        base->len = 2;
+        i = j;
+        continue;
+      }
+
+      // If the path is just a slash, leave it alone.
+      if (base->len == 1 && base->data[0] == '/') {
+        i = j;
+        continue;
+      }
+
+      // Remove trailing slash, if there is one.
+      if (base->len > 1 && base->data[base->len - 1] == '/') { base->len--; }
+
+      // If the path ends in '..' already, add another.
+      if (base->len >= 2 && base->data[base->len - 1] == '.' && base->data[base->len - 2] == '.' && (
+          base->len == 2 || (base->len > 2 && base->data[base->len - 3] == '/'))) {
+        if (base->len + 3 >= base->max) return -1;
+        base->data[base->len++] = '/';
+        base->data[base->len++] = '.';
+        base->data[base->len++] = '.';
+        i = j;
+        continue;
+      }
+
+      // Pop one segment, including slash.
+      while (base->len && base->data[base->len - 1] != '/') base->len--;
+      // Preserve leading slashes.
+      if (base->len == 0 && base->data[0] == '/') base->len = 1;
+      i = j;
+      continue;
+    }
+
+    // If the base is empty and the segment is absolute, insert leading slash
+    // Or if the base does not end in slash, add one as separator
+    if (base->len ?
+        base->data[base->len - 1] != '/' :
+        (path.len && path.data[0] == '/')) {
+      if (base->len + 1 >= base->max) return -1;
+      base->data[base->len++] = '/';
+    }
+
+    // Ensure space in the buffer
+    if (base->len + segment.len >= base->max) return -1;
+
+    memcpy(base->data + base->len, segment.data, segment.len);
+    base->len += segment.len;
+
+    i = j;
   }
+
+  // Use '.' if the base ends up empty.
+  if (base->len == 0 && base->max > 0) {
+    base->data[0] = '.';
+    base->len = 1;
+  }
+
+  // Make sure ending matches path
+  if (path.len) {
+    if (path.data[path.len - 1] == '/') {
+      if (base->data[base->len - 1] != '/') base->data[base->len++] = '/';
+    }
+    else {
+      if (base->len > 1 && base->data[base->len - 1] == '/') base->len--;
+    }
+  }
+  return 0;
 }
 
 path_t path_dirname(path_t path) {

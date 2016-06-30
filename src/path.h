@@ -19,7 +19,7 @@ union {
 
 
 path_t path_cstr(const char* str);
-void path_add(mpath_t *base, path_t path);
+int path_add(mpath_t *base, path_t path);
 path_t path_dirname(path_t path);
 path_t path_extension(path_t path);
 path_t path_filename(path_t path);

@@ -4,76 +4,101 @@
 
 #define PATH_MAX 4096
 
-void test(const char* left, const char* right, const char* expected, int resolve) {
-  char store[PATH_MAX];
-  mpath_t buffer = (mpath_t){
-    .data = store,
-    .len = 0,
-    .max = PATH_MAX
-  };
-  if (!resolve || *right != '/') {
-    path_add(&buffer, path_cstr(left));
-  }
-  path_add(&buffer, path_cstr(right));
-  printf("'%s' + '%s' = '%s' ? '%.*s'\n", left, right, expected, buffer.len, buffer.data);
-  assert(strlen(expected) == buffer.len);
-  assert(strncmp(expected, buffer.data, buffer.len) == 0);
-}
+typedef struct {
+  const char** args;
+  const char* result;
+} test_vector_t;
+
+test_vector_t tests[] = (test_vector_t[]){
+  {(const char*[]){".", "x/b", "..", "/b/c.js", NULL}, "x/b/c.js"},
+  {(const char*[]){"/.", "x/b", "..", "/b/c.js", NULL}, "/x/b/c.js"},
+  {(const char*[]){"/foo", "../../../bar", NULL}, "/bar"},
+  {(const char*[]){"foo", "../../../bar", NULL}, "../../bar"},
+  {(const char*[]){"foo/", "../../../bar", NULL}, "../../bar"},
+  {(const char*[]){"foo/x", "../../../bar", NULL}, "../bar"},
+  {(const char*[]){"foo/x", "./bar", NULL}, "foo/x/bar"},
+  {(const char*[]){"foo/x/", "./bar", NULL}, "foo/x/bar"},
+  {(const char*[]){"foo/x/", ".", "bar", NULL}, "foo/x/bar"},
+  {(const char*[]){"./", NULL}, "./"},
+  {(const char*[]){".", "./", NULL}, "./"},
+  {(const char*[]){".", ".", ".", NULL}, "."},
+  {(const char*[]){".", "./", ".", NULL}, "."},
+  {(const char*[]){".", "/./", ".", NULL}, "."},
+  {(const char*[]){".", "/////./", ".", NULL}, "."},
+  {(const char*[]){".", NULL}, "."},
+  {(const char*[]){"", ".", NULL}, "."},
+  {(const char*[]){"", "foo", NULL}, "foo"},
+  {(const char*[]){"foo", "/bar", NULL}, "foo/bar"},
+  {(const char*[]){"", "/foo", NULL}, "/foo"},
+  {(const char*[]){"", "", "/foo", NULL}, "/foo"},
+  {(const char*[]){"", "", "foo", NULL}, "foo"},
+  {(const char*[]){"foo", "", NULL}, "foo"},
+  {(const char*[]){"foo/", "", NULL}, "foo/"},
+  {(const char*[]){"foo", "", "/bar", NULL}, "foo/bar"},
+  {(const char*[]){"./", "..", "/foo", NULL}, "../foo"},
+  {(const char*[]){"./", "..", "..", "/foo", NULL}, "../../foo"},
+  {(const char*[]){".", "..", "..", "/foo", NULL}, "../../foo"},
+  {(const char*[]){"", "..", "..", "/foo", NULL}, "../../foo"},
+  {(const char*[]){"/", NULL}, "/"},
+  {(const char*[]){"/", ".", NULL}, "/"},
+  {(const char*[]){"/", "..", NULL}, "/"},
+  {(const char*[]){"/", "..", "..", NULL}, "/"},
+  {(const char*[]){"", NULL}, "."},
+  {(const char*[]){"", "", NULL}, "."},
+  {(const char*[]){" /foo", NULL}, " /foo"},
+  {(const char*[]){" ", "foo", NULL}, " /foo"},
+  {(const char*[]){" ", ".", NULL}, " "},
+  {(const char*[]){" ", "/", NULL}, " /"},
+  {(const char*[]){" ", "", NULL}, " "},
+  {(const char*[]){"/", "foo", NULL}, "/foo"},
+  {(const char*[]){"/", "/foo", NULL}, "/foo"},
+  {(const char*[]){"/", "//foo", NULL}, "/foo"},
+  {(const char*[]){"/", "", "/foo", NULL}, "/foo"},
+  {(const char*[]){"", "/", "foo", NULL}, "/foo"},
+  {(const char*[]){"", "/", "/foo", NULL}, "/foo"},
+  {NULL,NULL},
+};
 
 int main() {
-  test("", "a", "a", 0);
-  test("", "/a", "/a", 0);
-  test("", "a/", "a/", 0);
-  test("", "/a/", "/a/", 0);
+  char store[PATH_MAX];
+  test_vector_t *test = &(tests[0]);
+  while (test->args) {
+    const char** args = test->args;
+    const char* expected = test->result;
 
-  test("a", "b", "a/b", 0);
-  test("a/", "b", "a/b", 0);
-  test("a", "b/", "a/b/", 0);
-  test("a", "/b/", "a/b/", 0);
-  test("/a", "b", "/a/b", 0);
-  test("/a/", "b", "/a/b", 0);
-  test("/a", "b/", "/a/b/", 0);
-  test("/a", "/b/", "/a/b/", 0);
+    int comma = 0;
+    while (*args) {
+      if (comma) printf(" ");
+      comma = 1;
+      printf("'\033[32m%s\033[0m'", *args);
+      args++;
+    }
+    printf(" = '\033[32m%s\033[0m'?\n", expected);
+    args = test->args;
 
-  test("a///", "b", "a/b", 0);
-  test("a", "///b", "a/b", 0);
-  test("a", "b///", "a/b/", 0);
-  test("///a", "b", "/a/b", 0);
+    mpath_t buffer = (mpath_t){
+      .data = store,
+      .len = 0,
+      .max = PATH_MAX
+    };
+    while (*args) {
+      path_t path = path_cstr(*args);
+      path_add(&buffer, path);
+      args++;
+    }
+    if (buffer.len == 0) {
+      buffer.len = 1;
+      buffer.data[0] = '.';
+    }
 
-  test("a/./", "", "a/", 0);
-  test("a/.", "", "a", 0);
-  test("", "./a", "a", 0);
-  test("", "/./a", "/a", 0);
-
-  test("", ".", ".", 0);
-  test("", "./", "./", 0);
-
-  test("", "..", "..", 0);
-  test("", "../", "../", 0);
-  test("", "/..", "/", 0);
-  test("", "/../", "/", 0);
-
-  test("", "../b", "b", 0);
-  test("", "/../b", "/b", 0);
-  test("a", "../b", "b", 0);
-  test("a", "/../b", "b", 0);
-  test("/a", "../b", "/b", 0);
-  test("/a", "/../b", "/b", 0);
-
-  // test("Hello", "/./World", "Hello/World", 0);
-  // test("Hello", "//World", "Hello/World", 0);
-  // test("Hello/World", "../Galaxy", "Hello/Galaxy", 0);
-  // test("/Hello", "../Goodbye//World", "/Goodbye/World", 0);
-  // test("Hello", "../Goodbye//World", "Goodbye/World", 0);
-  // test("", "/absolute", "/absolute", 0);
-  // test("is", "/relative", "is/relative", 0);
-  //
-  // test("Hello", "World", "Hello/World", 1);
-  // test("Hello", "/./World", "/World", 1);
-  // test("Hello", "//World", "/World", 1);
-  // test("Hello/World", "../Galaxy", "Hello/Galaxy", 1);
-  // test("/Hello", "../Goodbye//World", "/Goodbye/World", 1);
-  // test("Hello", "../Goodbye//World", "Goodbye/World", 1);
-  // test("", "/absolute", "/absolute", 1);
-  // test("is", "/relative", "/relative", 1);
+    int matched = strlen(expected) == buffer.len && strncmp(expected, buffer.data, buffer.len) == 0;
+    if (matched) {
+      printf("\033[34mSuccess\033[0m\n");
+    }
+    else {
+      printf("\033[1;31mFailed\033[0m: Expected \033[32m%s\033[0m, but got: \033[32m%.*s\033[0m\n", expected, buffer.len, buffer.data);
+      assert(matched);
+    }
+    test++;
+  }
 }
