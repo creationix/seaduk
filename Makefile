@@ -49,7 +49,12 @@ target/nucleus: ${LIBS}
 install: target/nucleus
 	install $< /usr/local/bin/
 
-test: test-dir test-zip test-app test-app-tiny
+test: test-dir test-zip test-app test-app-tiny test-path
+
+test-path:
+	$(CC) src/test-path.c
+	./a.out
+	rm -f a.out
 
 test-dir: target/nucleus
 	$< test-app -- 1 2 3

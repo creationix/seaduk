@@ -9,6 +9,15 @@ path_t path_cstr(const char* str) {
   return result;
 }
 
+bool path_eq(path_t a, path_t b) {
+  if (a.len != b.len) return false;
+  for (unsigned int i = 0; i < a.len; i++) {
+    if (a.data[i] != b.data[i]) return false;
+  }
+  return true;
+}
+
+
 bool path_add(mpath_t *base, path_t path) {
   // Do nothing if both are empty.
   if (base->len == 0 && path.len == 0) return true;
@@ -165,14 +174,11 @@ path_t path_extension(path_t path) {
   return result;
 }
 
-path_t path_filename(path_t path) {
+path_t path_basename(path_t path) {
   int end = path.len;
   if (path.data[end - 1] == '/') end--;
   int start = 0;
   for (int i = end - 1; i >= 0; i--) {
-    if (path.data[i] == '.') {
-      end = i;
-    }
     if (path.data[i] == '/') {
       start = i + 1;
       break;

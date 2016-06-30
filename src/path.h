@@ -21,9 +21,10 @@ union {
 
 
 path_t path_cstr(const char* str);
+bool path_eq(path_t a, path_t b);
 bool path_add(mpath_t *base, path_t path);
 path_t path_dirname(path_t path);
 path_t path_extension(path_t path);
-path_t path_filename(path_t path);
+path_t path_basename(path_t path);
 
 #endif

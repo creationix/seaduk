@@ -85,14 +85,14 @@ static const char* ext_tests[] = (const char*[]){
   0
 };
 
-static const char* file_tests[] = (const char*[]){
-  "a.b", "a",
-  "a.b/", "a",
+static const char* base_tests[] = (const char*[]){
+  "a.b", "a.b",
+  "a.b/", "a.b",
   "a.b/c", "c",
-  "a.b/c.d", "c",
+  "a.b/c.d", "c.d",
   "/", "",
   "a/", "a",
-  "a.b.c", "a",
+  "a.b.c", "a.b.c",
   "", "",
   0
 };
@@ -104,14 +104,12 @@ int main() {
     const char** args = test->args;
     const char* expected = test->result;
 
-    int comma = 0;
+    printf("join");
     while (*args) {
-      if (comma) printf(" ");
-      comma = 1;
-      printf("'\033[32m%s\033[0m'", *args);
+      printf(" '\033[32m%s\033[0m'", *args);
       args++;
     }
-    printf(" = '\033[32m%s\033[0m'?\n", expected);
+    printf(" = '\033[32m%s\033[0m'\n", expected);
     args = test->args;
 
     mpath_t buffer = (mpath_t){
@@ -172,12 +170,12 @@ int main() {
     }
   }
 
-  const char **filetest = file_tests;
-  while (*filetest) {
-    const char* path = *filetest++;
-    const char* expected = *filetest++;
-    printf("filename '\033[32m%s\033[0m' = '\033[32m%s\033[0m'\n", path, expected);
-    path_t result = path_filename(path_cstr(path));
+  const char **basetest = base_tests;
+  while (*basetest) {
+    const char* path = *basetest++;
+    const char* expected = *basetest++;
+    printf("basename '\033[32m%s\033[0m' = '\033[32m%s\033[0m'\n", path, expected);
+    path_t result = path_basename(path_cstr(path));
     int matched = strlen(expected) == result.len && strncmp(expected, result.data, result.len) == 0;
     if (matched) {
       printf("\033[34mSuccess\033[0m\n");
