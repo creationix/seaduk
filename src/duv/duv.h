@@ -4,6 +4,10 @@
 #include "../../deps/libuv/include/uv.h"
 #include "../../deps/duktape-releases/src/duktape.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+
 typedef enum {
   DUV_TIMER,
   DUV_PREPARE,

@@ -9,13 +9,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
-#include "rust-path.h"
 
 #include "../deps/duktape-releases/src/duktape.h"
 #define MINIZ_HEADER_FILE_ONLY
 #include "../deps/miniz.c"
 #include "duv/duv.h"
 #include "env.h"
+#include "path.h"
 
 static duk_ret_t nucleus_exit(duk_context *ctx) {
   exit(duk_require_int(ctx, 0));
@@ -32,14 +32,17 @@ static struct {
   duk_c_function scan;
 } resource;
 
-
 static duk_ret_t duv_path_join(duk_context *ctx) {
-  const char* result = duk_get_string(ctx, 0);
-  for (int i = 1; i < duk_get_top(ctx); i++) {
-    const char* str = duk_get_string(ctx, i);
-    result = rust_join(result, str);
+  char store[PATH_MAX];
+  mpath_t buffer = (mpath_t){
+    .data = store,
+    .len = 0,
+    .max = PATH_MAX
+  };
+  for (int i = 0; i < duk_get_top(ctx); i++) {
+    path_add(&buffer, path_cstr(duk_get_string(ctx, i)));
   }
-  duk_push_string(ctx, result);
+  duk_push_lstring(ctx, buffer.data, buffer.len);
   return 1;
 }
 
@@ -395,7 +398,6 @@ int main(int argc, char *argv[]) {
   uv_setup_args(argc, argv);
   bool isZip = false;
   int argstart = 1;
-  const char* entry = 0;
   // If we detect a zip file appended to self, use it.
   if (mz_zip_reader_init_file(&zip, argv[0], 0)) {
     base = argv[0];
@@ -479,13 +481,16 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\nNo such file or directory: %s\n", originalBase);
     exit(1);
   }
-  printf("base='%s'\n", base);
-  const char* ext = rust_extension(base);
-  if (ext && !strcmp(ext, "js")) {
-    entry = rust_filename(base);
-    base = (char*)rust_dirname(base);
+  path_t path = path_cstr(base);
+  path_t ext = path_extension(path);
+  path_t entry = path_cstr("main.js");
+  if (path_eq(ext, path_cstr("js"))) {
+    entry = path_basename(path);
+    path = path_dirname(path);
+    base[path.len] = 0;
   }
-  printf("ext='%s' entry='%s' base='%s'\n", ext, entry, base);
+
+  // printf("base='%s', entry='%.*s'\n", base, entry.len, entry.data);
 
   if (isZip) {
     resource.read = read_from_zip;
@@ -505,7 +510,7 @@ int main(int argc, char *argv[]) {
 
   // Run main.js function
   duk_push_string(ctx, "nucleus.dofile('");
-  duk_push_string(ctx, entry ? entry : "main.js");
+  duk_push_lstring(ctx, entry.data, entry.len);
   duk_push_string(ctx, "')");
   duk_concat(ctx, 3);
   if (duk_peval(ctx)) {

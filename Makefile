@@ -7,15 +7,16 @@ CC= cc -g
 # CC= cc -Os
 # Uncomment the following to make a static musl binary on linux
 # CC= musl-gcc -Os -static
+# export CC
 
 LIBS=\
   target/main.o\
-	target/miniz.o\
-	target/duktape.o\
-	target/duv.a\
-	target/libuv.a\
 	target/env.o\
-	rust_path/target/release/libc_path.a
+	target/path.o\
+	target/miniz.o\
+	target/duv.a\
+	target/duktape.o\
+	target/libuv.a
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -44,15 +45,17 @@ DUV_LIBS=\
 	target/duv_dschema.o
 
 target/nucleus: ${LIBS}
-	${CC} $^ -lm -lpthread -ldl -o $@
-
-rust_path/target/release/libc_path.a: rust_path/src/lib.rs rust_path/src/helpers.rs
-	cd rust_path && cargo build --release
+	${CC} $^ -lm -pthread -o $@
 
 install: target/nucleus
 	install $< /usr/local/bin/
 
-test: test-dir test-zip test-app test-app-tiny
+test: test-dir test-zip test-app test-app-tiny test-path
+
+test-path:
+	$(CC) src/test-path.c
+	./a.out
+	rm -f a.out
 
 test-dir: target/nucleus
 	$< test-app -- 1 2 3
@@ -82,13 +85,13 @@ target/test-app.zip: test-app/* test-app/deps/*
 	cd test-app; zip -9 -r ../$@ .; cd -
 
 target/env.o: src/env.c src/env.h
-	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+
+target/path.o: src/path.c src/path.h
+	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/main.o: src/main.c src/*.h
-	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
-
-src/duv/duv.a: src/duv/*.c src/duv/*.h
-	${MAKE} -C src/duv
+	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
 	${CC} -std=c99 -Wall -Wextra -pedantic -c $< -o $@
@@ -103,7 +106,7 @@ target/duv.a: ${DUV_LIBS}
 		${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
-	${CC} -std=gnu99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
@@ -115,7 +118,7 @@ ${LIBUV}/configure: ${LIBUV}/autogen.sh
 	cd ${LIBUV}; ./autogen.sh; cd -
 
 clean:
-	rm -rf target/* rust_path/target
+	rm -rf target/*
 
 distclean: clean
 	cd ${LIBUV}; git clean -xdf; cd -
