@@ -475,7 +475,7 @@ int main(int argc, char *argv[]) {
   }
 
   const char* fullbase = realpath(base, 0);
-  if (!base) {
+  if (!fullbase) {
     print_usage(argv[0]);
     fprintf(stderr, "\nNo such file or directory: %s\n", base);
     exit(1);
