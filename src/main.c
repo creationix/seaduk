@@ -481,14 +481,12 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   path_t basepath = path_cstr(fullbase);
-  printf("basepath='%.*s'\n", basepath.len, basepath.data);
   path_t ext = path_extension(basepath);
   path_t entry = path_cstr("main.js");
   if (path_eq(ext, path_cstr("js"))) {
     entry = path_basename(basepath);
     basepath = path_dirname(basepath);
   }
-  printf("ext='%.*s' entry='%.*s' base='%.*s'\n", ext.len, ext.data, entry.len, entry.data, basepath.len, basepath.data);
 
   if (isZip) {
     resource.read = read_from_zip;
