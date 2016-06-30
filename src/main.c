@@ -481,12 +481,13 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\nNo such file or directory: %s\n", originalBase);
     exit(1);
   }
-  path_t basepath = path_cstr(base);
-  path_t ext = path_extension(basepath);
+  path_t path = path_cstr(base);
+  path_t ext = path_extension(path);
   path_t entry = path_cstr("main.js");
   if (path_eq(ext, path_cstr("js"))) {
-    entry = path_basename(basepath);
-    basepath = path_dirname(basepath);
+    entry = path_basename(path);
+    path = path_dirname(path);
+    strncpy(base, path.data, path.len);
   }
 
   if (isZip) {
