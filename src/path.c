@@ -9,19 +9,35 @@ path_t path_cstr(const char* str) {
   return result;
 }
 
+typedef enum {
+  EMPTY,
+  START,
+  NORMAL,
+  ONEDOT,
+  TWODOT,
+} path_parse_state_t;
+
+
+static void path_pop(mpath_t *base) {
+  // Ignore empty paths
+  if (!base->len) return;
+  
+}
+
 void path_add(mpath_t *base, path_t path) {
-  if (base->len > 0) {
+  // If the new segment is empty, ignore it.
+  if (!path.len) return;
+
+  // If the base is empty and the segment is absolute, insert leading slash
+  // Or if the base does not end in slash, add one as separator
+  if (base->len ? base->data[base->len - 1] != '/' : path.data[0] == '/') {
     base->data[base->len++] = '/';
   }
-  enum {
-    EMPTY,
-    START,
-    NORMAL,
-    ONEDOT,
-    TWODOT,
-  } state = base->len ? START : EMPTY;
-  for (int j = 0; j < path.len && base->len < base->max; j++) {
-    char next = path.data[j];
+
+  // Run the new segment through the state machine.
+  path_parse_state_t state = START;
+  for (unsigned int i = 0; i < path.len && base->len < base->max; i++) {
+    char next = path.data[i];
     switch (state) {
       case START:
         if (next == '/') {
@@ -43,17 +59,22 @@ void path_add(mpath_t *base, path_t path) {
         if (next == '.') state = TWODOT;
         else if (next == '/') {
           state = START;
-          base->len -= 2;
+          base->len -= 1;
+          continue;
         }
         else state = NORMAL;
       break;
       case TWODOT:
         if (next == '/') {
-          base->len -= 3;
-          while (base->len > 0 && base->data[--base->len] != '/');
-
-          state = base->len > 0 ? START : EMPTY;
-          printf("base='%.*s' base.len=%d\n", base->len, base->data, base->len);
+          if (base->len >= 3) {
+            base->len -= 3;
+            while (base->len && base->data[--base->len] != '/');
+            state = START;
+          }
+          else {
+            base->len = 0;
+          }
+          continue;
         }
       break;
     }

@@ -3,13 +3,13 @@
 
 typedef struct {
   const char *data;
-  int len;
+  unsigned int len;
 } path_t;
 
 typedef struct {
   char *data;
-  int len;
-  int max;
+  unsigned int len;
+  unsigned int max;
 } mpath_t;
 
 union {
