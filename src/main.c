@@ -487,8 +487,10 @@ int main(int argc, char *argv[]) {
   if (path_eq(ext, path_cstr("js"))) {
     entry = path_basename(path);
     path = path_dirname(path);
-    strncpy(base, path.data, path.len);
+    base[path.len] = 0;
   }
+
+  // printf("base='%s', entry='%.*s'\n", base, entry.len, entry.data);
 
   if (isZip) {
     resource.read = read_from_zip;
