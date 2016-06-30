@@ -9,7 +9,7 @@ typedef struct {
   const char* result;
 } test_vector_t;
 
-test_vector_t tests[] = (test_vector_t[]){
+static test_vector_t tests[] = (test_vector_t[]){
   {(const char*[]){".", "x/b", "..", "/b/c.js", NULL}, "x/b/c.js"},
   {(const char*[]){"/.", "x/b", "..", "/b/c.js", NULL}, "/x/b/c.js"},
   {(const char*[]){"/foo", "../../../bar", NULL}, "/bar"},
@@ -59,6 +59,44 @@ test_vector_t tests[] = (test_vector_t[]){
   {NULL,NULL},
 };
 
+static const char* dirname_tests[] = (const char*[]){
+  "a/b", "a",
+  "/a/b", "/a",
+  "a/b/", "a/",
+  "/a/b/", "/a/",
+  "a", "",
+  "a/", "",
+  "/a", "/",
+  "/a/", "/",
+  "", "",
+  "/", "/",
+  0
+};
+
+static const char* ext_tests[] = (const char*[]){
+  "a.b", "b",
+  "a.b/", "b",
+  "a.b/c", "",
+  "a.b/c.d", "d",
+  "/", "",
+  "a/", "",
+  "a.b.c", "b.c",
+  "", "",
+  0
+};
+
+static const char* file_tests[] = (const char*[]){
+  "a.b", "a",
+  "a.b/", "a",
+  "a.b/c", "c",
+  "a.b/c.d", "c",
+  "/", "",
+  "a/", "a",
+  "a.b.c", "a",
+  "", "",
+  0
+};
+
 int main() {
   char store[PATH_MAX];
   test_vector_t *test = &(tests[0]);
@@ -96,9 +134,58 @@ int main() {
       printf("\033[34mSuccess\033[0m\n");
     }
     else {
-      printf("\033[1;31mFailed\033[0m: Expected \033[32m%s\033[0m, but got: \033[32m%.*s\033[0m\n", expected, buffer.len, buffer.data);
+      printf("\033[1;31mFailed\033[0m: Expected '\033[32m%s\033[0m', but got: '\033[32m%.*s\033[0m'\n", expected, buffer.len, buffer.data);
       assert(matched);
     }
     test++;
   }
+
+  const char **dirtest = dirname_tests;
+  while (*dirtest) {
+    const char* dir = *dirtest++;
+    const char* expected = *dirtest++;
+    printf("dirname '\033[32m%s\033[0m' = '\033[32m%s\033[0m'\n", dir, expected);
+    path_t result = path_dirname(path_cstr(dir));
+    int matched = strlen(expected) == result.len && strncmp(expected, result.data, result.len) == 0;
+    if (matched) {
+      printf("\033[34mSuccess\033[0m\n");
+    }
+    else {
+      printf("\033[1;31mFailed\033[0m: Expected '\033[32m%s\033[0m', but got: '\033[32m%.*s\033[0m'\n", expected, result.len, result.data);
+      assert(matched);
+    }
+  }
+
+  const char **exttest = ext_tests;
+  while (*exttest) {
+    const char* path = *exttest++;
+    const char* expected = *exttest++;
+    printf("extension '\033[32m%s\033[0m' = '\033[32m%s\033[0m'\n", path, expected);
+    path_t result = path_extension(path_cstr(path));
+    int matched = strlen(expected) == result.len && strncmp(expected, result.data, result.len) == 0;
+    if (matched) {
+      printf("\033[34mSuccess\033[0m\n");
+    }
+    else {
+      printf("\033[1;31mFailed\033[0m: Expected '\033[32m%s\033[0m', but got: '\033[32m%.*s\033[0m'\n", expected, result.len, result.data);
+      assert(matched);
+    }
+  }
+
+  const char **filetest = file_tests;
+  while (*filetest) {
+    const char* path = *filetest++;
+    const char* expected = *filetest++;
+    printf("filename '\033[32m%s\033[0m' = '\033[32m%s\033[0m'\n", path, expected);
+    path_t result = path_filename(path_cstr(path));
+    int matched = strlen(expected) == result.len && strncmp(expected, result.data, result.len) == 0;
+    if (matched) {
+      printf("\033[34mSuccess\033[0m\n");
+    }
+    else {
+      printf("\033[1;31mFailed\033[0m: Expected '\033[32m%s\033[0m', but got: '\033[32m%.*s\033[0m'\n", expected, result.len, result.data);
+      assert(matched);
+    }
+  }
+
 }

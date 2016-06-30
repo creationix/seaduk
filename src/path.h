@@ -1,6 +1,8 @@
 #ifndef PATH_H
 #define PATH_H
 
+#include <stdbool.h>
+
 typedef struct {
   const char *data;
   unsigned int len;
@@ -19,7 +21,7 @@ union {
 
 
 path_t path_cstr(const char* str);
-int path_add(mpath_t *base, path_t path);
+bool path_add(mpath_t *base, path_t path);
 path_t path_dirname(path_t path);
 path_t path_extension(path_t path);
 path_t path_filename(path_t path);

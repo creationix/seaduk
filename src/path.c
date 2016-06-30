@@ -9,9 +9,9 @@ path_t path_cstr(const char* str) {
   return result;
 }
 
-int path_add(mpath_t *base, path_t path) {
+bool path_add(mpath_t *base, path_t path) {
   // Do nothing if both are empty.
-  if (base->len == 0 && path.len == 0) return 0;
+  if (base->len == 0 && path.len == 0) return true;
 
   // If the base is empty and the path is absolute, preserve leading slash
   if (base->len == 0 && base->max > 0 && path.len > 0 && path.data[0] == '/') {
@@ -56,7 +56,7 @@ int path_add(mpath_t *base, path_t path) {
     if (j - i == 2 && path.data[i] == '.' && path.data[i + 1] == '.') {
       // If this is an empty path, preserve the '..'
       if (base->len == 0) {
-        if (base->max < 2) return -1;
+        if (base->max < 2) return false;
         base->data[0] = '.';
         base->data[1] = '.';
         base->len = 2;
@@ -76,7 +76,7 @@ int path_add(mpath_t *base, path_t path) {
       // If the path ends in '..' already, add another.
       if (base->len >= 2 && base->data[base->len - 1] == '.' && base->data[base->len - 2] == '.' && (
           base->len == 2 || (base->len > 2 && base->data[base->len - 3] == '/'))) {
-        if (base->len + 3 >= base->max) return -1;
+        if (base->len + 3 >= base->max) return false;
         base->data[base->len++] = '/';
         base->data[base->len++] = '.';
         base->data[base->len++] = '.';
@@ -97,12 +97,12 @@ int path_add(mpath_t *base, path_t path) {
     if (base->len ?
         base->data[base->len - 1] != '/' :
         (path.len && path.data[0] == '/')) {
-      if (base->len + 1 >= base->max) return -1;
+      if (base->len + 1 >= base->max) return false;
       base->data[base->len++] = '/';
     }
 
     // Ensure space in the buffer
-    if (base->len + segment.len >= base->max) return -1;
+    if (base->len + segment.len >= base->max) return false;
 
     memcpy(base->data + base->len, segment.data, segment.len);
     base->len += segment.len;
@@ -125,25 +125,61 @@ int path_add(mpath_t *base, path_t path) {
       if (base->len > 1 && base->data[base->len - 1] == '/') base->len--;
     }
   }
-  return 0;
+  return true;
 }
 
 path_t path_dirname(path_t path) {
+  int absolute = path.len && path.data[0] == '/';
+  int trailing = path.len > 1 && path.data[path.len - 1] == '/';
   path_t result;
   result.data = path.data;
-  result.len = path.len;
-  for (int i = 0; i < path.len; i++) {
-    if (path.data[i] == '/') {
-      result.len = i;
+  result.len = 0;
+  for (int j = path.len - (trailing ? 2 : 1); j >= 0; j--) {
+    if (result.data[j] == '/') {
+      result.len = j;
+      break;
     }
+  }
+  if (result.len && trailing) {
+    result.len++;
+  }
+  if (absolute && result.len == 0) {
+    result.len = 1;
   }
   return result;
 }
 
 path_t path_extension(path_t path) {
-
+  int end = path.len;
+  if (path.data[end - 1] == '/') end--;
+  int start = end;
+  for (int i = end - 1; i >= 0; i--) {
+    if (path.data[i] == '.') {
+      start = i + 1;
+    }
+    if (path.data[i] == '/') break;
+  }
+  path_t result;
+  result.data = path.data + start;
+  result.len = end - start;
+  return result;
 }
 
 path_t path_filename(path_t path) {
-
+  int end = path.len;
+  if (path.data[end - 1] == '/') end--;
+  int start = 0;
+  for (int i = end - 1; i >= 0; i--) {
+    if (path.data[i] == '.') {
+      end = i;
+    }
+    if (path.data[i] == '/') {
+      start = i + 1;
+      break;
+    }
+  }
+  path_t result;
+  result.data = path.data + start;
+  result.len = end - start;
+  return result;
 }
