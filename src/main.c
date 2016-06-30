@@ -474,13 +474,14 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  const char* fullbase = realpath(base, 0);
-  if (!fullbase) {
+  const char* originalBase = base;
+  base = realpath(base, 0);
+  if (!base) {
     print_usage(argv[0]);
-    fprintf(stderr, "\nNo such file or directory: %s\n", base);
+    fprintf(stderr, "\nNo such file or directory: %s\n", originalBase);
     exit(1);
   }
-  path_t basepath = path_cstr(fullbase);
+  path_t basepath = path_cstr(base);
   path_t ext = path_extension(basepath);
   path_t entry = path_cstr("main.js");
   if (path_eq(ext, path_cstr("js"))) {
