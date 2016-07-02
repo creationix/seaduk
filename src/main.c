@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -16,6 +17,12 @@
 #include "duv/duv.h"
 #include "env.h"
 #include "path.h"
+
+typedef enum {
+  BUILD_ZIPONLY,
+  BUILD_LINKED,
+  BUILD_FULL
+} build_mode_t;
 
 static duk_ret_t nucleus_exit(duk_context *ctx) {
   exit(duk_require_int(ctx, 0));
@@ -320,13 +327,14 @@ void print_usage(const char* progname) {
          "\n"
          "  %s source -- args...              Run app from source tree\n"
          "  %s source/custom.js -- args...    Run custom main script\n"
-         "  %s source [-l] [-o target]        Build app\n"
+         "  %s source [-l] [-z] [-o target]   Build app\n"
          "\n"
          "Options:\n"
          "\n"
          "  -v | --version          Print version and exit\n"
          "  -h | --help             Print help and exit\n"
          "  -l | --linked           Link runtime instead of embedding\n"
+         "  -z | --ziponly          Only generate zip, no prefix\n"
          "  -o | --output target    Generate output binary at this path\n"
          "",
          progname, progname, progname);
@@ -367,7 +375,7 @@ void add_zip_dir(const char* path, const char* prefix) {
   }
 }
 
-void build_zip(const char* source, const char* target, int linked) {
+void build_zip(const char* self, const char* source, const char* target, build_mode_t mode) {
   print_version();
   char nucleus[PATH_MAX*2];
   size_t nucleus_size = PATH_MAX*2;
@@ -378,19 +386,72 @@ void build_zip(const char* source, const char* target, int linked) {
     perror("Cannot create target binary");
     exit(1);
   }
-  if (linked) {
-    printf("Inserting link to %.*s\n", (int)nucleus_size, nucleus);
-    write(outfd, "#!", 2);
-    write(outfd, nucleus, nucleus_size);
-    write(outfd, " --\n", 1);
-  }
-  else {
-    fprintf(stderr, "TODO: embed nucleus\n");
-    exit(1);
+  switch (mode) {
+    case BUILD_ZIPONLY:
+      printf("No prefix, building zip only\n");
+      break;
+    case BUILD_LINKED:
+      printf("Inserting link to %.*s\n", (int)nucleus_size, nucleus);
+      write(outfd, "#!", 2);
+      write(outfd, nucleus, nucleus_size);
+      write(outfd, " --\n", 1);
+      break;
+    case BUILD_FULL: {
+      int binSize;
+      if (mz_zip_reader_init_file(&zip, self, MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY)) {
+        // self has a zip appended, find it's start.
+        binSize = zip.m_start_ofs;
+      }
+      else {
+        // Self is just binary, find file size
+        struct stat buf;
+        if (stat(source, &buf)) {
+          fprintf(stderr, "Failed to stat %s: %s", source, strerror(errno));
+          exit(1);
+        }
+        binSize = buf.st_size;
+      }
+      printf("Copying initial %d bytes from %s\n", binSize, source);
+      int infd = open(source, O_RDONLY, 0600);
+      sendfile(outfd, infd, 0, binSize);
+      close(infd);
+
+      break;
+    }
   }
   close(outfd);
-  mz_zip_writer_init_file(&zip, target, 1024);
-  add_zip_dir(source, "");
+    //
+    //
+    //
+    //   local writer = miniz.new_writer()
+    //   local function copyFolder(path)
+    //     local files = bundle.readdir(path)
+    //     if not files then return end
+    //     for i = 1, #files do
+    //       local name = files[i]
+    //       if string.sub(name, 1, 1) ~= "." then
+    //         local child = pathJoin(path, name)
+    //         local stat = bundle.stat(child)
+    //         if stat.type == "directory" then
+    //           writer:add(child .. "/", "")
+    //           copyFolder(child)
+    //         elseif stat.type == "file" then
+    //           print("    " .. child)
+    //           writer:add(child, bundle.readfile(child), 9)
+    //         end
+    //       end
+    //     end
+    //   end
+    //   print("Zipping " .. bundle.base)
+    //   copyFolder("")
+    //   print("Writing zip file")
+    //   uv.fs_write(fd, writer:finalize(), binSize)
+    // uv.fs_close(fd)
+    //
+
+  // mz_zip_writer_init_file(&zip, target, 1024);
+  // add_zip_dir(source, "");
+  // mz_zip_writer_end(&zip);
   exit(1);
 }
 
@@ -404,7 +465,7 @@ int main(int argc, char *argv[]) {
     isZip = true;
   } else {
     int i;
-    int linked = 0;
+    int linked = 0, ziponly = 0;
     int outIndex = 0;
     for (i = 1; i < argc; i++) {
       if (strcmp(argv[i], "--") == 0) {
@@ -432,6 +493,10 @@ int main(int argc, char *argv[]) {
           linked = 1;
           continue;
         }
+        if (!strcmp(argv[i], "-z") || !strcmp(argv[i], "--ziponly")) {
+          ziponly = 1;
+          continue;
+        }
         if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
           outIndex = ++i;
           continue;
@@ -452,9 +517,14 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "\nMissing path to app and no embedded zip detected\n");
       exit(1);
     }
-    if (linked && !outIndex) {
+    if ((linked || ziponly) && !outIndex) {
       print_usage(argv[0]);
-      fprintf(stderr, "\nLinked option was specified, but not out path was given\n");
+      fprintf(stderr, "\nLinked op ziponly option was specified, but not out path was given\n");
+      exit(1);
+    }
+    if (linked && ziponly) {
+      print_usage(argv[0]);
+      fprintf(stderr, "\nCannot be both linked and zip-only\n");
       exit(1);
     }
     if (outIndex) {
@@ -463,7 +533,11 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\nMissing target path for --output option\n");
         exit(1);
       }
-      build_zip(base, argv[outIndex], linked);
+
+      build_zip(argv[0], base, argv[outIndex],
+        ziponly ? BUILD_ZIPONLY :
+         linked ? BUILD_LINKED :
+                  BUILD_FULL);
       exit(0);
     }
 
