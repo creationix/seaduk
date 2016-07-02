@@ -80,7 +80,7 @@ static const char* ext_tests[] = (const char*[]){
   "a.b/c.d", "d",
   "/", "",
   "a/", "",
-  "a.b.c", "b.c",
+  "a.b.c", "c",
   "", "",
   0
 };

@@ -165,6 +165,7 @@ path_t path_extension(path_t path) {
   for (int i = end - 1; i >= 0; i--) {
     if (path.data[i] == '.') {
       start = i + 1;
+      break;
     }
     if (path.data[i] == '/') break;
   }
