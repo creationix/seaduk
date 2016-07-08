@@ -16,7 +16,8 @@ LIBS=\
 	target/miniz.o\
 	target/duv.a\
 	target/duktape.o\
-	target/libuv.a
+	target/libuv.a\
+	build/src/libglfw3.a
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -117,8 +118,16 @@ ${LIBUV}/Makefile: ${LIBUV}/configure
 ${LIBUV}/configure: ${LIBUV}/autogen.sh
 	cd ${LIBUV}; ./autogen.sh; cd -
 
+build: deps/glfw/*
+	mkdir -p build
+	cmake -Hdeps/glfw -Bbuild
+
+build/src/libglfw3.a: build
+	cmake --build build
+
 clean:
 	rm -rf target/*
 
 distclean: clean
+	rm -rf build
 	cd ${LIBUV}; git clean -xdf; cd -
