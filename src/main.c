@@ -203,12 +203,9 @@ static duk_ret_t scan_from_disk(duk_context *ctx) {
 }
 
 static void compile(duk_context *ctx, const char* code, const char* name) {
-  duk_push_string(ctx, "function () {");
   duk_push_string(ctx, code);
-  duk_push_string(ctx, "}");
-  duk_concat(ctx, 3);
   duk_push_string(ctx, name);
-  duk_compile(ctx, DUK_COMPILE_FUNCTION);
+  duk_compile(ctx, 0);
 }
 
 static duk_ret_t nucleus_compile(duk_context *ctx) {

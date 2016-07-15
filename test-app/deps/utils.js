@@ -1,3 +1,4 @@
+(function(){
 "use strict";
 
 var width = 80;
@@ -169,3 +170,5 @@ return {
   color: color,
   colorize: colorize,
 };
+
+})();

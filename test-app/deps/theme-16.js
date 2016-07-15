@@ -1,3 +1,4 @@
+(function(){
 "use strict";
 
 // nice color theme using 256-mode colors
@@ -32,3 +33,4 @@ theme.failure   = "1;33;41";
 theme.highlight = "1;36;44";
 
 return theme;
+})();
