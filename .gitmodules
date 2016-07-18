@@ -4,6 +4,3 @@
 [submodule "deps/duktape-releases"]
 	path = deps/duktape-releases
 	url = https://github.com/svaarala/duktape-releases.git
-[submodule "deps/glfw"]
-	path = deps/glfw
-	url = https://github.com/glfw/glfw.git
