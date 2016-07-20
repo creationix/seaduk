@@ -69,20 +69,14 @@ test-app: target/app
 test-app-tiny: target/app-tiny
 	$< 10 11 12
 
-target/app: target/nucleus target/test-app.zip
-	cat $^ > $@
-	chmod +x $@
+target/app: target/nucleus test-app/* test-app/deps/*
+	$< test-app -o $@
 
-target/app-tiny: target/prefix target/test-app.zip
-	cat $^ > $@
-	chmod +x $@
+target/app-tiny: target/nucleus test-app/* test-app/deps/*
+	$< test-app -l -o $@
 
-target/prefix: target/nucleus
-	echo "#!$(shell pwd)/target/nucleus --" > $@
-
-target/test-app.zip: test-app/* test-app/deps/*
-	rm -f app.zip
-	cd test-app; zip -9 -r ../$@ .; cd -
+target/test-app.zip: target/nucleus test-app/* test-app/deps/*
+	$< test-app -z -o $@
 
 target/env.o: src/env.c src/env.h
 	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@

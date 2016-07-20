@@ -17,6 +17,13 @@
 #include "env.h"
 #include "path.h"
 
+enum build_mode {
+  BUILD_LINKED,
+  BUILD_ZIP,
+  BUILD_EMBEDDED
+};
+
+
 static duk_ret_t nucleus_exit(duk_context *ctx) {
   exit(duk_require_int(ctx, 0));
   return 0;
@@ -317,13 +324,14 @@ void print_usage(const char* progname) {
          "\n"
          "  %s source -- args...              Run app from source tree\n"
          "  %s source/custom.js -- args...    Run custom main script\n"
-         "  %s source [-l] [-o target]        Build app\n"
+         "  %s source [-l] [-z] [-o target]   Build app\n"
          "\n"
          "Options:\n"
          "\n"
          "  -v | --version          Print version and exit\n"
          "  -h | --help             Print help and exit\n"
          "  -l | --linked           Link runtime instead of embedding\n"
+         "  -z | --ziponly          Only create zip, no embedding\n"
          "  -o | --output target    Generate output binary at this path\n"
          "",
          progname, progname, progname);
@@ -364,7 +372,7 @@ void add_zip_dir(const char* path, const char* prefix) {
   }
 }
 
-void build_zip(const char* source, const char* target, int linked) {
+void build_zip(const char* source, const char* target, enum build_mode mode) {
   print_version();
   char nucleus[PATH_MAX*2];
   size_t nucleus_size = PATH_MAX*2;
@@ -375,15 +383,20 @@ void build_zip(const char* source, const char* target, int linked) {
     perror("Cannot create target binary");
     exit(1);
   }
-  if (linked) {
-    printf("Inserting link to %.*s\n", (int)nucleus_size, nucleus);
-    write(outfd, "#!", 2);
-    write(outfd, nucleus, nucleus_size);
-    write(outfd, " --\n", 1);
-  }
-  else {
-    fprintf(stderr, "TODO: embed nucleus\n");
-    exit(1);
+  switch (mode) {
+    case BUILD_ZIP:
+      printf("Creating plain zip\n");
+      break;
+    case BUILD_LINKED:
+      printf("Inserting link to %.*s\n", (int)nucleus_size, nucleus);
+      write(outfd, "#!", 2);
+      write(outfd, nucleus, nucleus_size);
+      write(outfd, " --\n", 1);
+      break;
+    case BUILD_EMBEDDED:
+      fprintf(stderr, "TODO: embed nucleus\n");
+      exit(1);
+      break;
   }
   close(outfd);
   mz_zip_writer_init_file(&zip, target, 1024);
@@ -401,11 +414,11 @@ int main(int argc, char *argv[]) {
     isZip = true;
   } else {
     int i;
-    int linked = 0;
+    int linked = 0, ziponly = 0;
     int outIndex = 0;
     for (i = 1; i < argc; i++) {
       if (strcmp(argv[i], "--") == 0) {
-        if (linked || outIndex) {
+        if (ziponly || linked || outIndex) {
           print_usage(argv[0]);
           fprintf(stderr, "\nCannot pass app args while building app binary.\n");
           exit(1);
@@ -429,6 +442,10 @@ int main(int argc, char *argv[]) {
           linked = 1;
           continue;
         }
+        if (!strcmp(argv[i], "-z") || !strcmp(argv[i], "--ziponly")) {
+          ziponly = 1;
+          continue;
+        }
         if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
           outIndex = ++i;
           continue;
@@ -449,9 +466,14 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "\nMissing path to app and no embedded zip detected\n");
       exit(1);
     }
-    if (linked && !outIndex) {
+    if (linked && ziponly) {
       print_usage(argv[0]);
-      fprintf(stderr, "\nLinked option was specified, but not out path was given\n");
+      fprintf(stderr, "\nCannoy specify both linked and zip-only\n");
+      exit(1);
+    }
+    if ((linked || ziponly) && !outIndex) {
+      print_usage(argv[0]);
+      fprintf(stderr, "\nLinked or zip-only option was specified, but not out path was given\n");
       exit(1);
     }
     if (outIndex) {
@@ -460,7 +482,10 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "\nMissing target path for --output option\n");
         exit(1);
       }
-      build_zip(base, argv[outIndex], linked);
+      build_zip(base, argv[outIndex],
+        linked  ? BUILD_LINKED :
+        ziponly ? BUILD_ZIP :
+                  BUILD_EMBEDDED);
       exit(0);
     }
 
