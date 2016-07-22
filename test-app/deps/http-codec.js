@@ -1,8 +1,12 @@
-// Boilerplate to work as CJS or eval style module.
-(typeof module === 'object' ?
-  function (fn) { module.exports = fn(); } :
-  function (fn) { return fn(); })(function () {
+/*jshint node:true*/
 "use strict";
+
+var bodec = require('./bodec');
+var slice = bodec.slice;
+var indexOf = bodec.indexOf;
+
+exports.encoder = encoder;
+exports.decoder = decoder;
 
 // lua-style assert helper
 function assert(val, message) { if (!val) throw new Error(message); }
@@ -137,9 +141,10 @@ function encoder() {
   }
 
   mode = encodeHead;
-  return function (item) {
+  function encode(item) {
     return mode(item);
-  };
+  }
+  return encode;
 }
 
 function decoder() {
@@ -152,25 +157,27 @@ function decoder() {
   function decodeHead(chunk) {
     if (!chunk) return;
 
-    var match = chunk.match(/\r?\n\r?\n/);
+    var index = indexOf(chunk, "\r\n\r\n");
     // First make sure we have all the head before continuing
-    if (!match) {
+    if (index < 0) {
       if (chunk.length < 8 * 1024) return;
       // But protect against evil clients by refusing heads over 8K long.
       throw new Error("entity too large");
     }
-    var tail = chunk.substr(match.index + match[0].length);
+    var tail = slice(chunk, index + 4);
 
     // Parse the status/request line
     var head = {};
 
-    match = chunk.match(/^HTTP\/(\d\.\d) (\d+) ([^\r\n]+)\r?\n/);
+    index = indexOf(chunk, "\n", 0) + 1;
+    var line = bodec.toString(chunk, 0, index);
+    var match = line.match(/^HTTP\/(\d\.\d) (\d+) ([^\r\n]+)/);
     if (match) {
       head.code = parseInt(match[2]);
       head.reason = match[3];
     }
     else {
-      match = chunk.match(/^([A-Z]+) ([^ ]+) HTTP\/(\d\.\d)\r?\n/);
+      match = line.match(/^([A-Z]+) ([^ ]+) HTTP\/(\d\.\d)/);
       if (match) {
         head.method = match[1];
         head.path = match[2];
@@ -182,18 +189,21 @@ function decoder() {
     head.version = parseFloat(match[3]);
     head.keepAlive = head.version > 1.0;
 
-    chunk = chunk.substr(match.index + match[0].length);
-
     // We need to inspect some headers to know how to parse the body.
     var contentLength;
     var chunkedEncoding;
 
     var headers = head.headers = [];
     // Parse the header lines
-    while (true) {
-      match = chunk.match(/^([^:\r\n]+): *([^\r\n]+)\r?\n/);
-      if (!match) break;
-      chunk = chunk.substr(match.index + match[0].length);
+    var start = index;
+    while ((index = indexOf(chunk, "\n", index) + 1)) {
+      line = bodec.toString(chunk, start, index);
+      if (line === '\r\n') break;
+      start = index;
+      match = line.match(/^([^:\r\n]+): *([^\r\n]+)/);
+      if (!match) {
+        throw new Error("Malformed HTTP header: " + line);
+      }
       var key = match[1],
           value = match[2];
       var lowerKey = key.toLowerCase();
@@ -239,7 +249,7 @@ function decoder() {
   }
 
   function decodeRaw(chunk) {
-    if (!chunk) return ["", ""];
+    if (!chunk) return [""];
     if (chunk.length === 0) return;
     return [chunk, ""];
   }
@@ -253,9 +263,9 @@ function decoder() {
     if (length === 0) {
       mode = decodeHead;
     }
-    chunk = chunk.substr(match[0].length);
-    assert(chunk.substr(length, 2) === "\r\n", "Invalid chunk tail");
-    return [chunk.substr(0, length), chunk.substr(length + 2)];
+    chunk = slice(chunk, match[0].length);
+    assert(indexOf(chunk, "\r\n") === 0, "Invalid chunk tail");
+    return [slice(chunk, 0, length), slice(chunk, length + 2)];
   }
 
   function decodeCounted(chunk) {
@@ -277,20 +287,19 @@ function decoder() {
       return [chunk, ""];
     }
 
-    return [chunk.substr(0, bytesLeft), chunk.substr(bytesLeft + 1)];
+    return [slice(chunk, 0, bytesLeft), slice(chunk, bytesLeft + 1)];
   }
 
   // Switch between states by changing which decoder mode points to
   mode = decodeHead;
-  return function (chunk) {
+  function decode(chunk) {
     return mode(chunk);
-  };
-
+  }
+  decode.concat = concat;
+  return decode;
 }
 
-return {
-  encoder: encoder,
-  decoder: decoder
-};
-
-});
+// Concat using node.js style Buffer APIs (works in duktape too)
+function concat(buffer, chunk) {
+  return buffer ? Buffer.concat(buffer, chunk): Buffer(chunk);
+}
