@@ -129,12 +129,21 @@ void* duv_require_this_handle(duk_context *ctx, duv_type_mask_t mask) {
   return handle;
 }
 
-void duv_call_callback(uv_handle_t* handle, const char* key, int nargs) {
+void duv_call_callback(uv_handle_t* handle, const char* key, int nargs, const char** cleanup) {
   duk_context *ctx = handle->data;
   duv_push_handle(ctx, handle);
   // stack: args... this
   duk_get_prop_string(ctx, -1, key);
   // stack: args... this fn
+
+  // Process cleanup names
+  if (cleanup) {
+    const char* key;
+    while ((key = *cleanup++)) {
+      duk_del_prop_string(ctx, -2, key);
+    }
+  }
+
   if (!duk_is_function(ctx, -1)) {
     duk_pop_n(ctx, 2 + nargs);
     return;
