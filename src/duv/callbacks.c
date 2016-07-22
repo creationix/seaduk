@@ -2,9 +2,9 @@
 #include "utils.h"
 
 void duv_on_close(uv_handle_t *handle) {
-  duv_call_callback(handle, "\xffon-close", 0, (const char*[]){
-    "\xffon-close", NULL
-  });
+  duv_emit(handle, "\xffon-close", 0, 1);
+  duk_context *ctx = handle->data;
+  duv_remove_handle(ctx, handle);
 }
 
 void duv_on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
@@ -14,23 +14,23 @@ void duv_on_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
 }
 
 void duv_on_timeout(uv_timer_t *timer) {
-  duv_call_callback((uv_handle_t*)timer, "\xffon-timeout", 0, NULL);
+  duv_emit((uv_handle_t*)timer, "\xffon-timeout", 0, 0);
 }
 
 void duv_on_prepare(uv_prepare_t *prepare) {
-  duv_call_callback((uv_handle_t*)prepare, "\xffon-prepare", 0, NULL);
+  duv_emit((uv_handle_t*)prepare, "\xffon-prepare", 0, 0);
 }
 
 void duv_on_check(uv_check_t *check) {
-  duv_call_callback((uv_handle_t*)check, "\xffon-check", 0, NULL);
+  duv_emit((uv_handle_t*)check, "\xffon-check", 0, 0);
 }
 
 void duv_on_idle(uv_idle_t *idle) {
-  duv_call_callback((uv_handle_t*)idle, "\xffon-idle", 0, NULL);
+  duv_emit((uv_handle_t*)idle, "\xffon-idle", 0, 0);
 }
 
 void duv_on_async(uv_async_t *async) {
-  duv_call_callback((uv_handle_t*)async, "\xffon-async", 0, NULL);
+  duv_emit((uv_handle_t*)async, "\xffon-async", 0, 0);
 }
 
 void duv_on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
@@ -51,34 +51,25 @@ void duv_on_read(uv_stream_t* stream, ssize_t nread, const uv_buf_t* buf) {
     duv_push_status(ctx, nread);
     duk_push_undefined(ctx);
   }
-  duv_call_callback((uv_handle_t*)stream, "\xffon-read", 2, NULL);
+  duv_emit((uv_handle_t*)stream, "\xffon-read", 2, 0);
 }
 
 void duv_on_write(uv_write_t *write, int status) {
-  uv_stream_t *stream = write->handle;
-  duk_context *ctx = stream->data;
+  duk_context *ctx = write->data;
   duv_push_status(ctx, status);
-  duv_call_callback((uv_handle_t*)stream, "\xffon-write", 1, (const char*[]){
-    "\xffon-write", "\xffreq-write", NULL
-  });
+  duv_resolve((uv_req_t*)write, 1);
 }
 
 void duv_on_connect(uv_connect_t *connect, int status) {
-  uv_stream_t *stream = connect->handle;
-  duk_context *ctx = stream->data;
+  duk_context *ctx = connect->data;
   duv_push_status(ctx, status);
-  duv_call_callback((uv_handle_t*)stream, "\xffon-connect", 1, (const char*[]){
-    "\xffon-connect", "\xffreq-connect", NULL
-  });
+  duv_resolve((uv_req_t*)connect, 1);
 }
 
 void duv_on_shutdown(uv_shutdown_t *shutdown, int status) {
-  uv_stream_t *stream = shutdown->handle;
-  duk_context *ctx = stream->data;
+  duk_context *ctx = shutdown->data;
   duv_push_status(ctx, status);
-  duv_call_callback((uv_handle_t*)stream, "\xffon-shutdown", 1, (const char*[]){
-    "\xffon-shutdown", "\xffreq-shutdown", NULL
-  });
+  duv_resolve((uv_req_t*)shutdown, 1);
 }
 
 void duv_on_connection(uv_stream_t *server, int status) {
@@ -89,5 +80,5 @@ void duv_on_connection(uv_stream_t *server, int status) {
   else {
     duk_push_null(ctx);
   }
-  duv_call_callback((uv_handle_t*)server, "\xffon-connection", 1, NULL);
+  duv_emit((uv_handle_t*)server, "\xffon-connection", 1, 0);
 }

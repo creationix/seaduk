@@ -85,14 +85,48 @@ void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type) {
   // Store this object in the heap stack keyed by the handle's pointer address.
   // This will prevent it from being garbage collected and allow us to find
   // it with nothing more than the handle's address.
+  duv_store_handle(ctx, handle);
+
+  // Store the context in the handle so it can use duktape APIs.
+  handle->data = ctx;
+}
+
+void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
+  // Create a new container object for the request
+  duk_push_object(ctx);
+  // TODO: should we have a shared prototype for uv_cancel_t and toString?
+  //       Currently these objects aren't exposed to the user.
+
+  // Set buffer as uv-data internal property.
+  duk_insert(ctx, -2);
+  duk_put_prop_string(ctx, -2, "\xff""uv-data");
+
+  // Store a reference to the lua callback
+  duk_dup(ctx, callback);
+  duk_put_prop_string(ctx, -2, "\xff""uv-callback");
+
+  // Store this object in the heap stack keyed by the request's pointer address.
+  // This will prevent it from being garbage collected and allow us to find
+  // it with nothing more than the request's address.
+  duv_store_handle(ctx, req);
+
+  // Store the context in the handle so it can use duktape APIs.
+  req->data = ctx;
+}
+
+void duv_store_handle(duk_context *ctx, void *handle) {
   duk_push_heap_stash(ctx);
   duk_dup(ctx, -2);
   snprintf(key, KEYLEN, "%"PRIXPTR, (uintptr_t)handle);
   duk_put_prop_string(ctx, -2, key);
   duk_pop(ctx);
+}
 
-  // Store the context in the handle so it can use duktape APIs.
-  handle->data = ctx;
+void duv_remove_handle(duk_context *ctx, void *handle) {
+  duk_push_heap_stash(ctx);
+  snprintf(key, KEYLEN, "%"PRIXPTR, (uintptr_t)handle);
+  duk_del_prop_string(ctx, -1, key);
+  duk_pop(ctx);
 }
 
 void duv_push_handle(duk_context *ctx, void *handle) {
@@ -129,21 +163,14 @@ void* duv_require_this_handle(duk_context *ctx, duv_type_mask_t mask) {
   return handle;
 }
 
-void duv_call_callback(uv_handle_t* handle, const char* key, int nargs, const char** cleanup) {
+void duv_emit(uv_handle_t* handle, const char* key, int nargs, int cleanup) {
   duk_context *ctx = handle->data;
   duv_push_handle(ctx, handle);
   // stack: args... this
   duk_get_prop_string(ctx, -1, key);
   // stack: args... this fn
-
-  // Process cleanup names
-  if (cleanup) {
-    const char* key;
-    while ((key = *cleanup++)) {
-      duk_del_prop_string(ctx, -2, key);
-    }
-  }
-
+  if (cleanup) duk_del_prop_string(ctx, -2, key);
+  // stack: args... this fn
   if (!duk_is_function(ctx, -1)) {
     duk_pop_n(ctx, 2 + nargs);
     return;
@@ -155,6 +182,34 @@ void duv_call_callback(uv_handle_t* handle, const char* key, int nargs, const ch
   duk_call_method(ctx, nargs);
   // stack: result
   duk_pop(ctx);
+}
+
+// Assumes nargs are the top of the stack.  Rest comes from request
+// Return value is not left on the stack.
+void duv_resolve(uv_req_t* req, int nargs) {
+  duk_context *ctx = req->data;
+  duv_push_handle(ctx, req);
+  // stack: args... obj
+  duk_get_prop_string(ctx, -1, "\xff""uv-callback");
+  // stack: args... obj callback
+  duk_del_prop_string(ctx, -2, "\xff""uv-callback");
+  // stack: args... obj callback
+
+  if (!duk_is_function(ctx, -1)) {
+    // stack: args... obj callback
+    duk_pop_n(ctx, 2 + nargs);
+    return;
+  }
+  duk_remove(ctx, -2);
+  // stack: args... callback
+  duk_insert(ctx, -(nargs + 1));
+  // stack: callback args...
+  duk_call(ctx, nargs);
+  // stack: result
+  duk_pop(ctx);
+
+  // Remove the request from the GC roots
+  duv_remove_handle(ctx, req);
 }
 
 void duv_get_data(duk_context *ctx, int index, uv_buf_t *buf) {

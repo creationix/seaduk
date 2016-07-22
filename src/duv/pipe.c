@@ -42,10 +42,9 @@ duk_ret_t duv_pipe_connect(duk_context *ctx) {
     {0,0}
   });
   uv_pipe_t *pipe = duv_require_this_handle(ctx, DUV_TCP_MASK);
-  duk_put_prop_string(ctx, 0, "\xffon-connect");
   uv_connect_t *req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  duk_put_prop_string(ctx, 0, "\xffreq-connect");
   uv_pipe_connect(req, pipe, duk_get_string(ctx, 1), duv_on_connect);
+  duv_setup_request(ctx, (uv_req_t*)req, 2);
   return 0;
 }
 

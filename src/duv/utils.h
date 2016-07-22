@@ -20,17 +20,28 @@ void duv_check(duk_context *ctx, int status);
 // replaces with this on top of stack.
 void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type);
 
+// Assumes buffer is at top of stack.
+void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback);
+
+// Store copy of value on top of stack using handle for key
+void duv_store_handle(duk_context *ctx, void *handle);
+// Remote a value from the global index by key
+void duv_remove_handle(duk_context *ctx, void *handle);
 // Push the object belonging to a handle on the stack.
 void duv_push_handle(duk_context *ctx, void *handle);
 // Get the handle from object at index.
 void* duv_get_handle(duk_context *ctx, int index);
+
 // Schema helper for checking arguments to be a certain handle type
 duk_bool_t duv_is_handle_of(duk_context *ctx, int index, duv_type_mask_t mask);
 // Get the this handle.
 void* duv_require_this_handle(duk_context *ctx, duv_type_mask_t mask);
 // Assumes nargs are the top of the stack.  Rest comes from handle and key.
 // Return value is not left on the stack.
-void duv_call_callback(uv_handle_t* handle, const char* key, int nargs, const char** cleanup);
+void duv_emit(uv_handle_t* handle, const char* key, int nargs, int cleanup);
+// Assumes nargs are the top of the stack.  Rest comes from request
+// Return value is not left on the stack.
+void duv_resolve(uv_req_t* req, int nargs);
 
 void duv_get_data(duk_context *ctx, int index, uv_buf_t *buf);
 
