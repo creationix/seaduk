@@ -4,19 +4,20 @@ LIBUV= deps/libuv
 # Default build is debug mode.
 CC= cc -g
 # Uncomment the following to make a small binary
-# CC= cc -Os
+#CC= cc -Os
 # Uncomment the following to make a static musl binary on linux
 # CC= musl-gcc -Os -static
 # export CC
 
+BINS=\
+        target/main.o\
+
 LIBS=\
-  target/main.o\
 	target/env.o\
 	target/path.o\
 	target/miniz.o\
-	target/duv.a\
-	target/duktape.o\
-	target/libuv.a
+	target/libduv.a\
+	target/duktape.o
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -44,11 +45,35 @@ DUV_LIBS=\
 	target/duv_callbacks.o\
 	target/duv_dschema.o
 
-target/nucleus: ${LIBS}
-	${CC} $^ -lm -pthread -o $@
+DUV_HEADER=\
+	deps/duktape-releases/src/duktape.h\
+	deps/duktape-releases/src/duk_config.h\
+	src/duv/duv.h
 
-install: target/nucleus
+all: 	target/libseaduk.so target/libduv.so target/nucleus target/libuv.a
+
+lib: 	target/libseaduk.so target/libduv.so target/libduv.a
+
+target/libseaduk.so: ${LIBS}
+	${CC} $^ -shared -fPIC -L/usr/local/lib -luv -pthread -o $@
+
+target/libduv.so: ${DUV_LIBS}
+	${CC} $^ -shared -fPIC -L/usr/local/lib -luv -pthread -lseaduk -Ltarget -o $@
+
+target/nucleus: ${BINS} ${LIBS}
+	${CC} $^ -lm -L/usr/local/lib -luv -pthread -lseaduk -Ltarget -o $@
+
+install: install-bin install-lib install-header
+
+install-bin: target/nucleus
 	install $< /usr/local/bin/
+
+install-lib: target/libseaduk.so target/libduv.so
+	install $^ /usr/local/lib/
+
+install-header: ${DUV_HEADER}
+	mkdir -p /usr/local/include/duv
+	install $^ /usr/local/include/duv/
 
 test: test-dir test-zip test-app test-app-tiny test-path
 
@@ -96,11 +121,19 @@ target/miniz.o: deps/miniz.c
 target/libuv.a: ${LIBUV}/.libs/libuv.a
 	cp $< $@
 
-target/duv.a: ${DUV_LIBS}
-		${AR} cr $@ ${DUV_LIBS}
+target/libduv.a: ${DUV_LIBS}
+	${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
 	${CC} -std=c99 -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -o $@
+
+init-duktape:
+	git submodule init deps/duktape-releases
+	git submodule update deps/duktape-releases
+
+init-libuv:
+	git submodule init deps/libuv
+	git submodule update deps/libuv
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
