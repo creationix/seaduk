@@ -1,13 +1,32 @@
-LIBUV= deps/libuv
+#
+# Set LIBUV to deps/libuv (for the submodule version), run make init-libuv to checkout the submodule
+# Set LIBUV to system to use the version deployed in the system
+# Set LIBUV to pkgconfig to use pkg-config for the setup
+#
+LIBUV=deps/libuv
+#LIBUV=system
+#LIBUV=pkg-config
+
+CC=cc
+
+#
+# Define buildtype : shared or static
+#
+BUILDTYPE=static
+
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
-CC= cc -g
+CFLAGS=-g
 # Uncomment the following to make a small binary
-#CC= cc -Os
-# Uncomment the following to make a static musl binary on linux
-# CC= musl-gcc -Os -static
-# export CC
+#CFLAGS=-Os
+# Uncomment the following to make a static musl binary on linux, set BUILTYPE to static
+#CFLAGS=-Os -static
+#CC=musl-gcc
+#BUILDTYPE=static
+#export CC
+
+LDFLAGS+=-L/usr/local/lib -Ltarget -luv
 
 BINS=\
         target/main.o\
@@ -50,25 +69,55 @@ DUV_HEADER=\
 	deps/duktape-releases/src/duk_config.h\
 	src/duv/duv.h
 
-all: 	target/libseaduk.so target/libduv.so target/nucleus target/libuv.a
 
-lib: 	target/libseaduk.so target/libduv.so target/libduv.a
+ifeq ($(BUILDTYPE), shared)
+   CFLAGS+=-fPIC
+   LDFLAGS+=-lseaduk
+   UVT=target/libuv.so
+else
+   UVT=target/libuv.a
+endif
+ifeq ($(LIBUV), pkgconfig)
+   CFLAGS+=$(pkg-config --cflags libuv)
+   LDFLAGS+=$(pkg-config --libs libuv)
+else ifneq ($(LIBUV), system)
+   CFLAGS+=-I./deps/libuv/include
+   UVTARGET=$(UVT)
+endif
+
+
+all:		all-${BUILDTYPE}
+install:	install-${BUILDTYPE}
+
+all-static: 	${UVTARGET} target/libduv.a target/nucleus
+
+all-shared: 	${UVTARGET} lib-shared target/nucleus
+
+lib-static: 	target/libduv.a
+
+lib-shared: 	target/libseaduk.so target/libduv.so
+
+pkg-config:
 
 target/libseaduk.so: ${LIBS}
-	${CC} $^ -shared -fPIC -L/usr/local/lib -luv -pthread -o $@
+	${CC} $^ ${CFLAGS} -shared -pthread -o $@
 
 target/libduv.so: ${DUV_LIBS}
-	${CC} $^ -shared -fPIC -L/usr/local/lib -luv -pthread -lseaduk -Ltarget -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -L/usr/local/lib -luv -pthread -o $@
 
 target/nucleus: ${BINS} ${LIBS}
-	${CC} $^ -lm -L/usr/local/lib -luv -pthread -lseaduk -Ltarget -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -pthread -o $@
 
-install: install-bin install-lib install-header
+install-static: install-bin install-lib-static install-header
+install-shared : install-bin install-lib-shared install-header
 
 install-bin: target/nucleus
 	install $< /usr/local/bin/
 
-install-lib: target/libseaduk.so target/libduv.so
+install-lib-static: target/libduv.a
+	install $^ /usr/local/lib/
+
+install-lib-shared: target/libseaduk.so target/libduv.so
 	install $^ /usr/local/lib/
 
 install-header: ${DUV_HEADER}
@@ -104,28 +153,31 @@ target/test-app.zip: target/nucleus test-app/* test-app/deps/*
 	$< test-app -z -o $@
 
 target/env.o: src/env.c src/env.h
-	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/path.o: src/path.c src/path.h
-	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/main.o: src/main.c src/*.h
-	${CC} -std=c99 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
-	${CC} -std=c99 -Wall -Wextra -pedantic -c $< -o $@
+	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
 
 target/miniz.o: deps/miniz.c
-	${CC} -std=gnu99 -c $< -o $@
+	${CC} -std=gnu99 ${LDFLAGS} ${CFLAGS} -c $< -o $@
 
-target/libuv.a: ${LIBUV}/.libs/libuv.a
+target/libuv.a: ${LIBUV}/.libs/libuv.a 
+	cp $< $@
+
+target/libuv.so: ${LIBUV}/.libs/libuv.so
 	cp $< $@
 
 target/libduv.a: ${DUV_LIBS}
 	${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
-	${CC} -std=c99 -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases

@@ -1,7 +1,7 @@
 #ifndef DUV_H
 #define DUV_H
 
-#include "../../deps/libuv/include/uv.h"
+#include <uv.h>
 #include "../../deps/duktape-releases/src/duktape.h"
 
 #ifndef PATH_MAX
