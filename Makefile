@@ -3,16 +3,17 @@
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
 #
-#LIBUV=deps/libuv
-#LIBUV=system
-LIBUV=pkg-config
+UVSRC=system
+#UVSRC=pkg-config
+#UVSRC=git
 
 CC=cc
 
 #
 # Define buildtype : shared or static
 #
-BUILDTYPE=static
+#BUILDTYPE=static
+BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
@@ -69,19 +70,24 @@ DUV_HEADER=\
 	src/duv/duv.h
 
 
+LIBUV=deps/libuv
+
 ifeq ($(BUILDTYPE), shared)
    CFLAGS+=-fPIC
    LDFLAGS+=-lseaduk
-   UVT=target/libuv.so
+   UVTARGET=target/libuv.so
 else
-   UVT=target/libuv.a
+   UVTARGET=target/libuv.a
 endif
-ifeq ($(LIBUV), pkg-config)
+ifeq ($(UVSRC), pkg-config)
    CFLAGS+=$(shell pkg-config --cflags libuv)
    LDFLAGS+=$(shell pkg-config --libs libuv)
-else ifneq ($(LIBUV), system)
-   CFLAGS+=-I./deps/libuv/include
-   UVTARGET=$(UVT)
+endif
+ifeq ($(UVSRC), git)
+   CFLAGS+=-Ideps/libuv/include
+endif
+ifeq ($(UVSRC), system)
+   CFLAGS+=-I/usr/local/include
 endif
 
 
@@ -95,8 +101,6 @@ all-shared: 	${UVTARGET} lib-shared target/nucleus
 lib-static: 	target/libduv.a
 
 lib-shared: 	target/libseaduk.so target/libduv.so
-
-pkg-config:
 
 target/libseaduk.so: ${LIBS}
 	${CC} $^ ${CFLAGS} -shared -pthread -o $@
@@ -152,31 +156,32 @@ target/test-app.zip: target/nucleus test-app/* test-app/deps/*
 	$< test-app -z -o $@
 
 target/env.o: src/env.c src/env.h
-	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/path.o: src/path.c src/path.h
-	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/main.o: src/main.c src/*.h
-	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
-	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
 
 target/miniz.o: deps/miniz.c
-	${CC} -std=gnu99 ${LDFLAGS} ${CFLAGS} -c $< -o $@
+	${CC} -std=gnu99 ${CFLAGS} -c $< -o $@
 
 target/libuv.a: ${LIBUV}/.libs/libuv.a 
 	cp $< $@
 
 target/libuv.so: ${LIBUV}/.libs/libuv.so
-	cp $< $@
+	@if [ `uname -s` == Linux ]; then cp ${LIBUV}/.libs/libuv.so target; fi
+	@if [ `uname -s` == Darwin ]; then cp ${LIBUV}/.libs/libuv.dylib target; fi
 
 target/libduv.a: ${DUV_LIBS}
 	${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
-	${CC} -std=c99 ${LDFLAGS} ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases
@@ -187,6 +192,9 @@ init-libuv:
 	git submodule update deps/libuv
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
+	${MAKE} -C ${LIBUV}
+	
+${LIBUV}/.libs/libuv.so: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
 
 ${LIBUV}/Makefile: ${LIBUV}/configure
