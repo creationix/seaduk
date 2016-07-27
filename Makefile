@@ -3,9 +3,9 @@
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
 #
-LIBUV=deps/libuv
+#LIBUV=deps/libuv
 #LIBUV=system
-#LIBUV=pkg-config
+LIBUV=pkg-config
 
 CC=cc
 
@@ -13,7 +13,6 @@ CC=cc
 # Define buildtype : shared or static
 #
 BUILDTYPE=static
-
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
@@ -77,9 +76,9 @@ ifeq ($(BUILDTYPE), shared)
 else
    UVT=target/libuv.a
 endif
-ifeq ($(LIBUV), pkgconfig)
-   CFLAGS+=$(pkg-config --cflags libuv)
-   LDFLAGS+=$(pkg-config --libs libuv)
+ifeq ($(LIBUV), pkg-config)
+   CFLAGS+=$(shell pkg-config --cflags libuv)
+   LDFLAGS+=$(shell pkg-config --libs libuv)
 else ifneq ($(LIBUV), system)
    CFLAGS+=-I./deps/libuv/include
    UVTARGET=$(UVT)
