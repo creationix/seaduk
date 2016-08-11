@@ -9,6 +9,7 @@
 #include "async.h"
 #include "stream.h"
 #include "tcp.h"
+#include "udp.h"
 #include "pipe.h"
 #include "tty.h"
 
@@ -81,6 +82,12 @@ static const duk_function_list_entry duv_tcp_methods[] = {
   {0,0,0}
 };
 
+static const duk_function_list_entry duv_udp_methods[] = {
+  {"bind", duv_udp_bind, 2},
+  {"getsockname", duv_udp_getsockname, 0},
+  {0,0,0}
+};
+
 static const duk_function_list_entry duv_pipe_methods[] = {
   {"open", duv_pipe_open, 1},
   {"bind", duv_pipe_bind, 1},
@@ -111,6 +118,7 @@ static const duk_function_list_entry duv_funcs[] = {
   {"Idle", duv_new_idle, 0},
   {"Async", duv_new_async, 1},
   {"Tcp", duv_new_tcp, 0},
+  {"Udp", duv_new_udp, 0},
   {"Pipe", duv_new_pipe, 1},
   {"Tty", duv_new_tty, 2},
 
@@ -253,6 +261,15 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_set_prototype(ctx, -2);
 
   // stack: nucleus uv Handle.prototype Stream.prototype
+
+  // uv.Udp.prototype
+  duk_get_prop_string(ctx, -3, "Udp");
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_udp_methods);
+  duk_dup(ctx, -3);
+  duk_set_prototype(ctx, -2);
+  duk_put_prop_string(ctx, -2, "prototype");
+  duk_pop(ctx);
 
   // uv.Tcp.prototype
   duk_get_prop_string(ctx, -3, "Tcp");

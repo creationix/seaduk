@@ -20,6 +20,7 @@ BUILDTYPE=shared
 CFLAGS=-g
 # Uncomment the following to make a small binary
 #CFLAGS=-Os
+#CFLAGS=-O3
 # Uncomment the following to make a static musl binary on linux, set BUILTYPE to static
 #CFLAGS=-Os -static
 #CC=musl-gcc
@@ -75,7 +76,7 @@ LIBUV=deps/libuv
 ifeq ($(BUILDTYPE), shared)
    CFLAGS+=-fPIC
    LDFLAGS+=-lseaduk
-   UVTARGET=target/libuv.so
+   UVTARGET=target/libuv.dylib
 else
    UVTARGET=target/libuv.a
 endif
@@ -100,12 +101,12 @@ all-shared: 	${UVTARGET} lib-shared target/nucleus
 
 lib-static: 	target/libduv.a
 
-lib-shared: 	target/libseaduk.so target/libduv.so
+lib-shared: 	target/libseaduk.dylib target/libduv.dylib
 
-target/libseaduk.so: ${LIBS}
+target/libseaduk.dylib: ${LIBS}
 	${CC} $^ ${CFLAGS} -shared -pthread -o $@
 
-target/libduv.so: ${DUV_LIBS}
+target/libduv.dylib: ${DUV_LIBS}
 	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -L/usr/local/lib -luv -pthread -o $@
 
 target/nucleus: ${BINS} ${LIBS}
@@ -120,7 +121,7 @@ install-bin: target/nucleus
 install-lib-static: target/libduv.a
 	install $^ /usr/local/lib/
 
-install-lib-shared: target/libseaduk.so target/libduv.so
+install-lib-shared: target/libseaduk.dylib target/libduv.dylib
 	install $^ /usr/local/lib/
 
 install-header: ${DUV_HEADER}
@@ -173,8 +174,8 @@ target/miniz.o: deps/miniz.c
 target/libuv.a: ${LIBUV}/.libs/libuv.a 
 	cp $< $@
 
-target/libuv.so: ${LIBUV}/.libs/libuv.so
-	@if [ `uname -s` == Linux ]; then cp ${LIBUV}/.libs/libuv.so target; fi
+target/libuv.dylib: ${LIBUV}/.libs/libuv.dylib
+	@if [ `uname -s` == Linux ]; then cp ${LIBUV}/.libs/libuv.dylib target; fi
 	@if [ `uname -s` == Darwin ]; then cp ${LIBUV}/.libs/libuv.dylib target; fi
 
 target/libduv.a: ${DUV_LIBS}
@@ -194,7 +195,7 @@ init-libuv:
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
 	
-${LIBUV}/.libs/libuv.so: ${LIBUV}/Makefile
+${LIBUV}/.libs/libuv.dylib: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
 
 ${LIBUV}/Makefile: ${LIBUV}/configure
