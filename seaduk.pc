@@ -3,7 +3,6 @@ Description: Nucleus JS Implementation
 Version: 0.0.1
 Requires: libuv
 prefix=/usr/local
-prefix=/usr/local
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
