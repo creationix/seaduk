@@ -70,6 +70,8 @@ DUV_HEADER=\
 	deps/duktape-releases/src/duk_config.h\
 	src/duv/duv.h
 
+SEADUK_PKGCONFIG=\
+        seaduk.pc
 
 LIBUV=deps/libuv
 
@@ -113,7 +115,7 @@ target/nucleus: ${BINS} ${LIBS}
 	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -pthread -o $@
 
 install-static: install-bin install-lib-static install-header
-install-shared : install-bin install-lib-shared install-header
+install-shared : install-bin install-lib-shared install-header install-pkgconfig
 
 install-bin: target/nucleus
 	install $< /usr/local/bin/
@@ -127,6 +129,9 @@ install-lib-shared: target/libseaduk.dylib target/libduv.dylib
 install-header: ${DUV_HEADER}
 	mkdir -p /usr/local/include/duv
 	install $^ /usr/local/include/duv/
+
+install-pkgconfig: ${SEADUK_PKGCONFIG}
+	install $^ /usr/local/lib/pkgconfig
 
 test: test-dir test-zip test-app test-app-tiny test-path
 
