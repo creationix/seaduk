@@ -2,7 +2,7 @@
 #define DUV_H
 
 #include <uv.h>
-#include "../../deps/duktape-releases/src/duktape.h"
+#include "duktape.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -49,7 +49,7 @@ typedef enum {
   DUV_POLL_MASK = 1 << DUV_POLL,
   DUV_SIGNAL_MASK = 1 << DUV_SIGNAL,
   DUV_PROCESS_MASK = 1 << DUV_PROCESS,
-  DUV_STREAM_MASK = 1 << DUV_TCP | 1 << DUV_PIPE | 1 << DUV_TTY,
+  DUV_STREAM_MASK = 1 << DUV_TCP | 1 << DUV_PIPE | 1 << DUV_TTY | 1 << DUV_UDP,
   DUV_TCP_MASK = 1 << DUV_TCP,
   DUV_PIPE_MASK = 1 << DUV_PIPE,
   DUV_TTY_MASK = 1 << DUV_TTY,

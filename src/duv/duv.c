@@ -84,6 +84,8 @@ static const duk_function_list_entry duv_tcp_methods[] = {
 
 static const duk_function_list_entry duv_udp_methods[] = {
   {"bind", duv_udp_bind, 2},
+  {"connect", duv_udp_connect, 2},
+  {"recvStart", duv_udp_recv_start, 1},
   {"getsockname", duv_udp_getsockname, 0},
   {0,0,0}
 };

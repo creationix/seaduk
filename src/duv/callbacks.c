@@ -82,3 +82,43 @@ void duv_on_connection(uv_stream_t *server, int status) {
   }
   duv_emit((uv_handle_t*)server, "\xffon-connection", 1, 0);
 }
+
+void duv_on_udp_recv_start(uv_udp_t* udp, long nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags){
+  duk_context *ctx = udp->data;
+  if (nread >= 0) {
+    char* out;
+    duk_push_null(ctx);
+    out = duk_push_fixed_buffer(ctx, nread);
+    memcpy(out, buf->base, nread);
+  }
+  free(buf->base);
+  if (nread == 0) {
+      //assert(addr == NULL);
+      if(addr == NULL) return;
+      if(flags == 0) return;
+      return;
+  }
+
+  if (nread == UV_EOF) {
+    duk_push_null(ctx); // no error
+    duk_push_undefined(ctx); // undefined value to signify EOF
+  }
+  else if (nread < 0) {
+    duv_push_status(ctx, nread);
+    duk_push_undefined(ctx);
+  }
+  duv_emit((uv_handle_t*)udp, "\xffon-read", 2, 0);
+}
+
+void duv_on_udp_send(uv_udp_send_t* udp, int status){
+  duv_on_write((uv_write_t*)udp,status);
+}
+//  duk_context *ctx = server->data;
+//  if (status) {
+//    duk_push_error_object(ctx, DUK_ERR_ERROR, "%s: %s", uv_err_name(status), uv_strerror(status));
+//  }
+//  else {
+//    duk_push_null(ctx);
+//  }
+//  duv_emit((uv_handle_t*)server, "\xffon-sent", 1, 0);
+//}

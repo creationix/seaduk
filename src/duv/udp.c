@@ -7,31 +7,10 @@ duk_ret_t duv_new_udp(duk_context *ctx) {
   return 1;
 }
 
-duk_ret_t duv_udp_bind(duk_context *ctx) {
-  dschema_check(ctx, (const duv_schema_entry[]) {
-    {"host", duk_is_string},
-    {"port", duk_is_number},
-    {0,0}
-  });
-  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
-  const char *host = duk_get_string(ctx, 1);
-  int port = duk_get_number(ctx, 2),
-      flags = 0;
-  struct sockaddr_storage addr;
-  if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
-      uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
-    duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
-  }
-  duv_check(ctx, uv_udp_bind(udp,
-    (struct sockaddr*)&addr,
-    flags
-  ));
-  return 0;
-}
-
 static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address, int addrlen) {
   char ip[INET6_ADDRSTRLEN];
   int port = 0;
+  return;
   if (address->ss_family == AF_INET) {
     struct sockaddr_in* addrin = (struct sockaddr_in*)address;
     uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
@@ -51,6 +30,52 @@ static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address
   duk_put_prop_string(ctx, -2, "ip");
 }
 
+// connect() only sets the address that the socket will send packets to if you call send(); 
+duk_ret_t duv_udp_connect(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"host", duk_is_string},
+    {"port", duk_is_number},
+    {0,0}
+  });
+  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+  if(!udp) {}
+  const char *host = duk_get_string(ctx, 1);
+  int port = duk_get_number(ctx, 2);
+  //    flags = 0;
+  struct sockaddr_storage addr;
+  if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
+      uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
+    duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
+  }
+  // TODO : implement flags, store addr6
+  duv_push_sockaddr(ctx, &addr, sizeof(addr));
+  return 0;
+}
+
+duk_ret_t duv_udp_bind(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"host", duk_is_string},
+    {"port", duk_is_number},
+    {0,0}
+  });
+  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+  const char *host = duk_get_string(ctx, 1);
+  int port = duk_get_number(ctx, 2),
+      // UV_UDP_REUSEADDR = 4
+      flags = 4;
+  struct sockaddr_storage addr;
+  if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
+      uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
+    duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
+  }
+  // TODO : implement flags
+  duv_check(ctx, uv_udp_bind(udp,
+    (struct sockaddr*)&addr,
+    flags
+  ));
+  return 0;
+}
+
 duk_ret_t duv_udp_getsockname(duk_context *ctx) {
   uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
   struct sockaddr_storage address;
@@ -59,3 +84,52 @@ duk_ret_t duv_udp_getsockname(duk_context *ctx) {
   duv_push_sockaddr(ctx, &address, addrlen);
   return 1;
 }
+
+duk_ret_t duv_udp_recv_start(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"callback", dschema_is_continuation},
+    {0,0}
+  });
+  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+  duk_put_prop_string(ctx, 0, "\xffon-read");
+  duv_check(ctx, uv_udp_recv_start(udp, duv_on_alloc, duv_on_udp_recv_start));
+  return 0;
+}
+
+duk_ret_t duv_udp_send(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {"callback", dschema_is_continuation},
+    {0,0}
+  });
+  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+  uv_udp_send_t *req = duk_push_fixed_buffer(ctx, sizeof(*req));
+  uv_buf_t buf;
+  duv_get_data(ctx, 1, &buf);
+  // TODO : ADDR
+  duv_check(ctx, uv_udp_send(req, udp, &buf, 1, NULL, duv_on_udp_send));
+//  IS THIS NEEDED FOR UDP?
+//  duv_setup_request(ctx, (uv_req_t*)req, 2);
+  return 0;
+}
+
+//duk_ret_t duv_udp_connect(duk_context *ctx) {
+//  dschema_check(ctx, (const duv_schema_entry[]) {
+//    {"host", duk_is_string},
+//    {"port", duk_is_number},
+//    {"callback", dschema_is_continuation},
+//    {0,0}
+//  });
+//  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+//  uv_connect_t *req = duk_push_fixed_buffer(ctx, sizeof(*req));
+//  const char *host = duk_get_string(ctx, 1);
+//  int port = duk_get_number(ctx, 2);
+//  struct sockaddr_storage addr;
+//  if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
+//      uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
+//    duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
+//  }
+//  duv_check(ctx, uv_udp_connect(req, udp, (struct sockaddr*)&addr, duv_on_connect));
+//  duv_setup_request(ctx, (uv_req_t*)req, 3);
+//  return 0;
+//}

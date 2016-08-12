@@ -28,5 +28,7 @@ void duv_on_write(uv_write_t *shutdown, int status);
 void duv_on_connect(uv_connect_t *shutdown, int status);
 void duv_on_shutdown(uv_shutdown_t *shutdown, int status);
 void duv_on_connection(uv_stream_t *server, int status);
+void duv_on_udp_recv_start(uv_udp_t* udp, long nread, const uv_buf_t* buf, const struct sockaddr* addr, unsigned flags);
+void duv_on_udp_send(uv_udp_send_t* udp, int stat);
 
 #endif
