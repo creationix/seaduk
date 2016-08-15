@@ -67,7 +67,8 @@ static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address
 //}
 
 duk_ret_t duv_udp_bind(duk_context *ctx) {
-  int port;
+  // UV_UDP_REUSEADDR = 4
+  int port, flags = 4;
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"host", duk_is_string},
     {"port", duk_is_number},
@@ -75,9 +76,7 @@ duk_ret_t duv_udp_bind(duk_context *ctx) {
   });
   uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
   const char *host = duk_get_string(ctx, 1);
-  port = duk_get_number(ctx, 2),
-      // UV_UDP_REUSEADDR = 4
-      flags = 4;
+  port = duk_get_number(ctx, 2);
   struct sockaddr_storage addr;
   if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
       uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
