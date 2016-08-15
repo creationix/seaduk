@@ -18,29 +18,45 @@ duk_ret_t duv_udp_broadcast(duk_context *ctx) {
   return 0;
 }
 
-static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address, int addrlen) {
-  char ip[INET6_ADDRSTRLEN];
-  int port = 0;
-  if (address->ss_family == AF_INET) {
-    struct sockaddr_in* addrin = (struct sockaddr_in*)address;
-    uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
-    port = ntohs(addrin->sin_port);
-  } else if (address->ss_family == AF_INET6) {
-    struct sockaddr_in6* addrin6 = (struct sockaddr_in6*)address;
-    uv_inet_ntop(AF_INET6, &(addrin6->sin6_addr), ip, addrlen);
-    port = ntohs(addrin6->sin6_port);
-  }
+// Not yet clear if needed in UDP Protocol
+//static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address, int addrlen) {
+//  char ip[INET6_ADDRSTRLEN];
+//  int port = 0;
+//  if (address->ss_family == AF_INET) {
+//    struct sockaddr_in* addrin = (struct sockaddr_in*)address;
+//    uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
+//    port = ntohs(addrin->sin_port);
+//  } else if (address->ss_family == AF_INET6) {
+//    struct sockaddr_in6* addrin6 = (struct sockaddr_in6*)address;
+//    uv_inet_ntop(AF_INET6, &(addrin6->sin6_addr), ip, addrlen);
+//    port = ntohs(addrin6->sin6_port);
+//  }
+//
+//  duk_push_object(ctx);
+//  duk_push_string(ctx, duv_protocol_to_string(address->ss_family));
+//  duk_put_prop_string(ctx, -2, "family");
+//  duk_push_number(ctx, port);
+//  duk_put_prop_string(ctx, -2, "port");
+//  duk_push_string(ctx, ip);
+//  duk_put_prop_string(ctx, -2, "ip");
+//}
 
-  duk_push_object(ctx);
-  duk_push_string(ctx, duv_protocol_to_string(address->ss_family));
-  duk_put_prop_string(ctx, -2, "family");
-  duk_push_number(ctx, port);
-  duk_put_prop_string(ctx, -2, "port");
-  duk_push_string(ctx, ip);
-  duk_put_prop_string(ctx, -2, "ip");
-  duk_push_pointer(ctx, address);
-  duk_put_prop_string(ctx, -2, "\xff""addr");
-}
+//duk_ret_t duv_udp_getsocket(duk_context *ctx) {
+//  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+//  struct sockaddr_storage address;
+//  int addrlen = sizeof(address);
+//  duv_check(ctx, uv_udp_getsockname(udp, (struct sockaddr*)&address, &addrlen));
+//  duv_push_sockaddr(ctx, &address, addrlen);
+//  return 1;
+//}
+//duk_ret_t duv_udp_getsockname(duk_context *ctx) {
+//  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
+//  struct sockaddr_storage address;
+//  int addrlen = sizeof(address);
+//  duv_check(ctx, uv_udp_getsockname(udp, (struct sockaddr*)&address, &addrlen));
+//  duv_push_sockaddr(ctx, &address, addrlen);
+//  return 1;
+//}
 
 // connect() only sets the address that the socket will send packets to if you call send(); 
 //duk_ret_t duv_udp_connect(duk_context *ctx) {
@@ -88,24 +104,6 @@ duk_ret_t duv_udp_bind(duk_context *ctx) {
   return 0;
 }
 
-duk_ret_t duv_udp_getsocket(duk_context *ctx) {
-  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
-  struct sockaddr_storage address;
-  int addrlen = sizeof(address);
-  duv_check(ctx, uv_udp_getsockname(udp, (struct sockaddr*)&address, &addrlen));
-  duv_push_sockaddr(ctx, &address, addrlen);
-  return 1;
-}
-
-duk_ret_t duv_udp_getsockname(duk_context *ctx) {
-  uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
-  struct sockaddr_storage address;
-  int addrlen = sizeof(address);
-  duv_check(ctx, uv_udp_getsockname(udp, (struct sockaddr*)&address, &addrlen));
-  duv_push_sockaddr(ctx, &address, addrlen);
-  return 1;
-}
-
 duk_ret_t duv_udp_recv_stop(duk_context *ctx) {
   uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
   duv_check(ctx, uv_udp_recv_stop(udp));
@@ -143,7 +141,6 @@ duk_ret_t duv_udp_send(duk_context *ctx) {
     return 0;
   }
   // TODO : implement flags
-  duv_push_sockaddr(ctx, &addr, sizeof(addr));
   uv_udp_send_t *req = duk_push_fixed_buffer(ctx, sizeof(*req));
   uv_buf_t buf;
   duv_get_data(ctx, 3, &buf);
