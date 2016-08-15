@@ -2,8 +2,8 @@
 # Set LIBUV to deps/libuv (for the submodule version), run make init-libuv to checkout the submodule
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
-#
-UVSRC=git
+
+UVSRC=system
 #UVSRC=pkg-config
 #UVSRC=git
 
@@ -13,7 +13,7 @@ CC=cc
 # Define buildtype : shared or static
 #
 #BUILDTYPE=static
-BUILDTYPE=static
+BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
@@ -29,7 +29,7 @@ CFLAGS=-g
 #export CC
 
 # Set this to 'so' for linux/sun or to 'dylib' for MacOS
-SHAREDSUFFIX=so
+SHAREDSUFFIX=dylib
 
 LDFLAGS+=-L/usr/local/lib -Ltarget -luv
 
