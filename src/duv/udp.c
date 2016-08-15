@@ -21,7 +21,6 @@ duk_ret_t duv_udp_broadcast(duk_context *ctx) {
 static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address, int addrlen) {
   char ip[INET6_ADDRSTRLEN];
   int port = 0;
-  return;
   if (address->ss_family == AF_INET) {
     struct sockaddr_in* addrin = (struct sockaddr_in*)address;
     uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
@@ -68,6 +67,7 @@ static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address
 //}
 
 duk_ret_t duv_udp_bind(duk_context *ctx) {
+  int port;
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"host", duk_is_string},
     {"port", duk_is_number},
@@ -75,13 +75,14 @@ duk_ret_t duv_udp_bind(duk_context *ctx) {
   });
   uv_udp_t *udp = duv_require_this_handle(ctx, DUV_UDP_MASK);
   const char *host = duk_get_string(ctx, 1);
-  int port = duk_get_number(ctx, 2),
+  port = duk_get_number(ctx, 2),
       // UV_UDP_REUSEADDR = 4
       flags = 4;
   struct sockaddr_storage addr;
   if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
       uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
     duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
+    return 0;
   }
   // TODO : implement flags
   duv_check(ctx, uv_udp_bind(udp, (struct sockaddr*)&addr, flags));
@@ -140,6 +141,7 @@ duk_ret_t duv_udp_send(duk_context *ctx) {
   if (uv_ip4_addr(host, port, (struct sockaddr_in*)&addr) &&
       uv_ip6_addr(host, port, (struct sockaddr_in6*)&addr)) {
     duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
+    return 0;
   }
   // TODO : implement flags
   duv_push_sockaddr(ctx, &addr, sizeof(addr));
