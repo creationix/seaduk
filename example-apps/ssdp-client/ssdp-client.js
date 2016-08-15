@@ -1,17 +1,24 @@
+//
+//	Simple SSDP client, tested against nodejs SSDP server from node-ssdp module
+//
 var p = nucleus.dofile('deps/utils.js').prettyPrint;
 var uv = nucleus.uv;
 
-var broadcastAddress = '239.255.255.250';
+// Build up a valid search string
+var searchST = 'upnp:rootdevice';
 var broadcastPort = 1900;
-var broadcastString = 'M-SEARCH * HTTP/1.1\r\nHOST:239.255.255.250:1900\r\nMAN:\'ssdp:discover\'\r\nST:ssdp:all\r\nNT:upnp:rootdevice\r\nMX:1\r\n\r\n';
+var broadcastAddress = '239.255.255.250';
+var broadcastString = 'M-SEARCH * HTTP/1.1\r\nHOST:'+broadcastAddress+':'+broadcastPort+'\r\nMAN:\'ssdp:discover\'\r\nST:ssdp:all\r\nNT:'+searchST+'\r\nMX:1\r\n\r\n';
 
+// This is the ST Header content we are waiting for in the response
+var findST = 'upnp:rootdevice';
 var discovery =true;
-
 var server = new uv.Udp();
+
 server.bind('0.0.0.0',8080);
 server.broadcast(true);
 
-server.send(broadcastAddress,broadcastPort,broadcastString , function (err) {
+server.send(broadcastAddress, broadcastPort, broadcastString , function (err) {
   if (err) {throw err;}
   p('SSDP Packet sent. Waiting for response', server);
   server.readStart(function (err, chunk) {
@@ -24,7 +31,7 @@ server.send(broadcastAddress,broadcastPort,broadcastString , function (err) {
 	    header[kv[0]] = temp[i].replace(/^.*?:/,'').trim();
 	}
     }
-    if(header.ST === 'upnp:rootdevice' && header.LOCATION){
+    if(header.ST === findST && header.LOCATION){
 	  location = header.LOCATION;
 	  print('Found location : '+location+', stopping SSDP discovery');
 	  discovery = false;
@@ -40,7 +47,7 @@ timer1.start(1000, 2000, function () {
        timer1.close();
        return;
   }
-  server.send('239.255.255.250',1900,'M-SEARCH * HTTP/1.1\r\nHOST:239.255.255.250:1900\r\nMAN:\'ssdp:discover\'\r\nST:ssdp:all\r\nNT:upnp:rootdevice\r\nMX:1\r\n\r\n', function (err) {
+  server.send(broadcastAddress,broadcastPort,broadcastString , function (err) {
     if(err) {throw err;}
     print('Sent ssdp package');
   });
