@@ -31,6 +31,7 @@ server.send(broadcastAddress, broadcastPort, broadcastString , function (err) {
 	    header[kv[0]] = temp[i].replace(/^.*?:/,'').trim();
 	}
     }
+    p("Got response :",header);
     if(header.ST === findST && header.LOCATION){
 	  location = header.LOCATION;
 	  print('Found location : '+location+', stopping SSDP discovery');
