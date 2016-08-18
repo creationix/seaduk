@@ -89,12 +89,14 @@ endif
 ifeq ($(UVSRC), pkg-config)
    CFLAGS+=$(shell pkg-config --cflags libuv)
    LDFLAGS+=$(shell pkg-config --libs libuv)
+   UVTARGET=
 endif
 ifeq ($(UVSRC), git)
    CFLAGS+=-Ideps/libuv/include
 endif
 ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
+   UVTARGET=
 endif
 
 
