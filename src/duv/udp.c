@@ -36,14 +36,22 @@ duk_ret_t duv_udp_broadcast(duk_context *ctx) {
 
 static void duv_push_sockaddr(duk_context *ctx, struct sockaddr_storage* address, int addrlen) {
   char ip[INET6_ADDRSTRLEN];
-  int port = 0;
+  int port = 0, ret = 0;
   if (address->ss_family == AF_INET) {
     struct sockaddr_in* addrin = (struct sockaddr_in*)address;
-    uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
+    ret = uv_inet_ntop(AF_INET, &(addrin->sin_addr), ip, addrlen);
+    if(ret) {
+      // Bail out with an error or simply return?
+      duk_error(ctx, DUK_ERR_TYPE_ERROR, "uv_inet_ntop failed.");
+    }
     port = ntohs(addrin->sin_port);
   } else if (address->ss_family == AF_INET6) {
     struct sockaddr_in6* addrin6 = (struct sockaddr_in6*)address;
-    uv_inet_ntop(AF_INET6, &(addrin6->sin6_addr), ip, addrlen);
+    ret = uv_inet_ntop(AF_INET6, &(addrin6->sin6_addr), ip, addrlen);
+    if(ret) {
+      // Bail out with an error or simply return?
+      duk_error(ctx, DUK_ERR_TYPE_ERROR, "uv_inet_ntop failed.");
+    }
     port = ntohs(addrin6->sin6_port);
   }
 

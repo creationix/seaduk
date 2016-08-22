@@ -112,13 +112,13 @@ lib-static: 	target/libduv.a
 lib-shared: 	target/libseaduk.${SHAREDSUFFIX} target/libduv.${SHAREDSUFFIX}
 
 target/libseaduk.${SHAREDSUFFIX}: ${LIBS}
-	${CC} $^ ${CFLAGS} -shared -pthread -o $@
+	${CC} $^ ${CFLAGS} -shared -o $@
 
 target/libduv.${SHAREDSUFFIX}: ${DUV_LIBS}
-	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -L/usr/local/lib -luv -pthread -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -L/usr/local/lib -luv -o $@
 
 target/nucleus: ${BINS} ${LIBS}
-	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -pthread -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -o $@
 
 install-static: install-bin install-lib-static install-header
 install-shared : install-bin install-lib-shared install-header install-pkgconfig
