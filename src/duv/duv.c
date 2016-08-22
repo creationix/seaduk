@@ -88,7 +88,8 @@ static const duk_function_list_entry duv_udp_methods[] = {
   {"readStart", duv_udp_recv_start, 1},
   {"readStop", duv_udp_recv_stop, 0},
   {"broadcast", duv_udp_broadcast, 1},
-// TODO : multicast
+  {"getsockname", duv_udp_getsockname, 0},
+  {"setTtl", duv_udp_set_ttl, 1},
   {0,0,0}
 };
 

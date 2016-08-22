@@ -17,6 +17,8 @@ var server = new uv.Udp();
 
 server.bind('0.0.0.0',8080);
 server.broadcast(true);
+server.setTtl(200);
+p('Bound to ',server.getsockname());
 
 server.send(broadcastAddress, broadcastPort, broadcastString , function (err) {
   if (err) {throw err;}
