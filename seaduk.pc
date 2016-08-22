@@ -6,5 +6,5 @@ prefix=/usr/local
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include/duv
-Libs: -luv
+Libs: -luv -lseaduk -lduv
 Cflags: -I${includedir}
