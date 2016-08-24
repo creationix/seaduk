@@ -74,6 +74,11 @@ DUV_HEADER=\
 	deps/duktape-releases/src/duk_config.h\
 	src/duv/duv.h
 
+SEADUK_HEADER=\
+	src/duv/callbacks.h\
+	src/duv/dschema.h\
+	src/duv/utils.h
+
 SEADUK_PKGCONFIG=\
         seaduk.pc
 
@@ -97,6 +102,7 @@ ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
 endif
 
+CFLAGS+=-Ideps/duktape-releases/src
 
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}
@@ -118,8 +124,8 @@ target/libduv.${SHAREDSUFFIX}: ${DUV_LIBS}
 target/nucleus: ${BINS} ${LIBS}
 	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -pthread -o $@
 
-install-static: install-bin install-lib-static install-header
-install-shared : install-bin install-lib-shared install-header install-pkgconfig
+install-static: install-bin install-lib-static install-header install-seaduk-header
+install-shared : install-bin install-lib-shared install-header install-pkgconfig install-seaduk-header
 
 install-bin: target/nucleus
 	install $< /usr/local/bin/
@@ -132,6 +138,9 @@ install-lib-shared: target/libseaduk.${SHAREDSUFFIX} target/libduv.${SHAREDSUFFI
 
 install-header: ${DUV_HEADER}
 	mkdir -p /usr/local/include/duv
+	install $^ /usr/local/include/duv/
+
+install-seaduk-header: ${SEADUK_HEADER}
 	install $^ /usr/local/include/duv/
 
 install-pkgconfig: ${SEADUK_PKGCONFIG}

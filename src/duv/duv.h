@@ -2,7 +2,7 @@
 #define DUV_H
 
 #include <uv.h>
-#include "../../deps/duktape-releases/src/duktape.h"
+#include <duktape.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
