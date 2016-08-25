@@ -29,7 +29,11 @@ CFLAGS=-g
 #export CC
 
 # Set this to 'so' for linux/sun or to 'dylib' for MacOS
-SHAREDSUFFIX=dylib
+ifeq ($(OS),Darwin)
+	SHAREDSUFFIX=dylib
+else
+	SHAREDSUFFIX=so
+endif
 
 LDFLAGS+=-L/usr/local/lib -Ltarget -luv
 
@@ -104,7 +108,7 @@ ifeq ($(UVSRC), system)
    UVTARGET=
 endif
 
-CFLAGS+=-Ideps/duktape-releases/src
+CFLAGS+=-I./deps/duktape-releases/src
 
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}
@@ -177,13 +181,13 @@ target/test-app.zip: target/nucleus test-app/* test-app/deps/*
 	$< test-app -z -o $@
 
 target/env.o: src/env.c src/env.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -I./deps/duktape-releases/src -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/path.o: src/path.c src/path.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
 
 target/main.o: src/main.c src/*.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
 	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
@@ -202,7 +206,7 @@ target/libduv.a: ${DUV_LIBS}
 	${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
-	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -I./deps/duktape-releases/src -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases
