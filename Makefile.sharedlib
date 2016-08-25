@@ -35,7 +35,7 @@ else
 	SHAREDSUFFIX=so
 endif
 
-LDFLAGS+=-L/usr/local/lib -Ltarget -luv
+LDFLAGS+=-Ltarget -luv
 
 BINS=\
         target/main.o\
@@ -96,15 +96,15 @@ else
    UVTARGET=target/libuv.a
 endif
 ifeq ($(UVSRC), pkg-config)
-   CFLAGS+=$(shell pkg-config --cflags libuv)
+   CFLAGS+=$(shell pkg-config --cflags libuv) -fPIC
    LDFLAGS+=$(shell pkg-config --libs libuv)
    UVTARGET=
 endif
 ifeq ($(UVSRC), git)
-   CFLAGS+=-Ideps/libuv/include
+   CFLAGS+=-Ideps/libuv/include -fPIC
 endif
 ifeq ($(UVSRC), system)
-   CFLAGS+=-I/usr/local/include
+   CFLAGS+=-fPIC
    UVTARGET=
 endif
 
@@ -125,10 +125,10 @@ target/libseaduk.${SHAREDSUFFIX}: ${LIBS}
 	${CC} $^ ${CFLAGS} -shared -o $@
 
 target/libduv.${SHAREDSUFFIX}: ${DUV_LIBS}
-	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -L/usr/local/lib -luv -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -luv -o $@
 
 target/nucleus: ${BINS} ${LIBS}
-	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -L/usr/local/lib -luv -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -luv -o $@
 
 install-static: install-bin install-lib-static install-header install-seaduk-header
 install-shared : install-bin install-lib-shared install-header install-pkgconfig install-seaduk-header
@@ -181,32 +181,31 @@ target/test-app.zip: target/nucleus test-app/* test-app/deps/*
 	$< test-app -z -o $@
 
 target/env.o: src/env.c src/env.h
-	${CC} -std=c99 ${CFLAGS} -I./deps/duktape-releases/src -Wall -Wextra -pedantic -Werror -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -fPIC -I./deps/duktape-releases/src -Wall -Wextra -pedantic -Werror -c $< -o $@
 
 target/path.o: src/path.c src/path.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
 
 target/main.o: src/main.c src/*.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
-	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -c $< -o $@
 
 target/miniz.o: deps/miniz.c
-	${CC} -std=gnu99 ${CFLAGS} -c $< -o $@
+	${CC} -std=gnu99 ${CFLAGS} -fPIC -c $< -o $@
 
 target/libuv.a: ${LIBUV}/.libs/libuv.a 
 	cp $< $@
 
 target/libuv.${SHAREDSUFFIX}: ${LIBUV}/.libs/libuv.${SHAREDSUFFIX}
-	@if [ `uname -s` == Linux ]; then cp ${LIBUV}/.libs/libuv.${SHAREDSUFFIX} target; fi
-	@if [ `uname -s` == Darwin ]; then cp ${LIBUV}/.libs/libuv.${SHAREDSUFFIX} target; fi
+	cp ${LIBUV}/.libs/libuv.${SHAREDSUFFIX} target
 
 target/libduv.a: ${DUV_LIBS}
 	${AR} cr $@ ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
-	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -I./deps/duktape-releases/src -o $@
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -fPIC -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -I./deps/duktape-releases/src -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases
