@@ -4,6 +4,10 @@ duk_bool_t dschema_is_data(duk_context* ctx, duk_idx_t index) {
   return duk_is_string(ctx, index) || duk_is_buffer(ctx, index);
 }
 
+duk_bool_t dschema_is_fd(duk_context* ctx, duk_idx_t index) {
+  return duk_is_number(ctx, index);
+}
+
 duk_bool_t dschema_is_continuation(duk_context* ctx, duk_idx_t index) {
   return !duk_is_valid_index(ctx, index) ||
           duk_is_function(ctx, index) ||
