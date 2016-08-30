@@ -3,9 +3,11 @@ var uv = nucleus.uv;
 
 function assert(condition, message) {
     if (!condition) {
-        throw message || "Assertion failed";
+        throw new Error(message || "Assertion failed")
     }
 }
+
+assert(1);
 
 print("\nTimer.prototype");
 p(uv.Timer.prototype);
@@ -137,6 +139,8 @@ timer.start(10, 0, function () {
   }
 });
 uv.run();
+
+assert(typeof uv.version === 'function','misc not compiled in seaduk');
 
 var version = uv.version();
 var version_string = uv.version_string();
