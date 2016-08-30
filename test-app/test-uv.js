@@ -1,6 +1,12 @@
 var p = nucleus.dofile("deps/utils.js").prettyPrint;
 var uv = nucleus.uv;
 
+function assert(condition, message) {
+    if (!condition) {
+        throw message || "Assertion failed";
+    }
+}
+
 print("\nTimer.prototype");
 p(uv.Timer.prototype);
 print("Handle.prototype (via Timer.prototype)");
@@ -131,6 +137,65 @@ timer.start(10, 0, function () {
   }
 });
 uv.run();
+
+var version = uv.version();
+var version_string = uv.version_string();
+p({
+    version: version,
+    version_string: version_string,
+});
+assert(typeof version === "number");
+assert(typeof version_string === "string");
+
+var rss = uv.resident_set_memory();
+var total = uv.get_total_memory();
+p({
+  rss: rss,
+  total: total
+});
+assert(rss < total);
+
+var uptime = uv.uptime();
+p({uptime: uptime});
+
+var rusage = uv.getrusage();
+p(rusage);
+
+var info = uv.cpu_info();
+p(info);
+
+var addresses = uv.interface_addresses();
+p(addresses);
+
+var avg = uv.loadavg();
+p({loadavg:avg});
+assert(avg.length === 3);
+
+var path = uv.exepath();
+p({exepath: path});
+
+var old = uv.cwd();
+uv.chdir("/");
+var cwd = uv.cwd();
+p({
+    original: old,
+    changed: cwd
+});
+assert(cwd !== old);
+uv.chdir(old);
+
+var old = uv.get_process_title();
+uv.set_process_title("Magic");
+var changed = uv.get_process_title();
+p({
+    original: old,
+    changed: changed,
+});
+assert(old !== changed);
+uv.set_process_title(old);
+
+var time = uv.hrtime();
+p({"hrtime": time});
 
 print("\nTesting TCP Server");
 var server = new uv.Tcp();

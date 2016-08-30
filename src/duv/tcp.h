@@ -2,6 +2,7 @@
 #define TCP_H
 
 #include "duv.h"
+#include "utils.h"
 
 duk_ret_t duv_new_tcp(duk_context *ctx);
 duk_ret_t duv_tcp_open(duk_context *ctx);

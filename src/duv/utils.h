@@ -4,6 +4,8 @@
 #include "duv.h"
 #include "dschema.h"
 
+const char* duv_protocol_to_string(int family);
+
 const char* duv_type_to_string(duv_type_t type);
 const char* duv_mask_to_string(duv_type_mask_t mask);
 
