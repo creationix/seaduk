@@ -1,10 +1,14 @@
-#ifndef SEADUK_MISC
-#define SEADUK_MISC
+#ifndef DUV_MISC_H
+#define DUV_MISC_H
+#include "duv.h"
+#include "misc.h"
+#include "dschema.h"
 
 #ifndef MAX_TITLE_LENGTH
 #define MAX_TITLE_LENGTH (8192)
 #endif
 
+duk_ret_t duv_guess_handle(duk_context *ctx);
 duk_ret_t duv_version(duk_context *ctx);
 duk_ret_t duv_version_string(duk_context *ctx);
 duk_ret_t duv_get_process_title(duk_context *ctx);

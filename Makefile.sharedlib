@@ -29,11 +29,11 @@ CFLAGS=-g
 #export CC
 
 # Set this to 'so' for linux/sun or to 'dylib' for MacOS
-ifeq ($(OS),Darwin)
+#ifeq ($(OS),Darwin)
 	SHAREDSUFFIX=dylib
-else
-	SHAREDSUFFIX=so
-endif
+#else
+#	SHAREDSUFFIX=so
+#endif
 
 LDFLAGS+=-Ltarget -luv
 

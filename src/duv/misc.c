@@ -1,6 +1,24 @@
 #include "duv.h"
 #include "misc.h"
-#include "tcp.h"
+
+duk_ret_t duv_guess_handle(duk_context *ctx) {
+  uv_file file;
+
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"fd", dschema_is_fd},
+    {0,0}
+  });
+
+  file = duk_get_uint(ctx, 0);
+  switch (uv_guess_handle(file)) {
+#define XX(uc, lc) case UV_##uc: duk_push_string(ctx, #uc); break;
+  UV_HANDLE_TYPE_MAP(XX)
+#undef XX
+    case UV_FILE: duk_push_string(ctx, "FILE"); break;
+    default: return 0;
+  }
+  return 1;
+}
 
 duk_ret_t duv_version(duk_context *ctx) {
  duk_push_uint(ctx, uv_version());
