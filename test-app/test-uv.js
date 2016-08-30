@@ -7,8 +7,6 @@ function assert(condition, message) {
     }
 }
 
-assert(1);
-
 print("\nTimer.prototype");
 p(uv.Timer.prototype);
 print("Handle.prototype (via Timer.prototype)");
