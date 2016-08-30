@@ -186,8 +186,11 @@ target/env.o: src/env.c src/env.h
 target/path.o: src/path.c src/path.h
 	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
 
+#target/misc.o: src/misc.c src/misc.h
+#	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -I./deps/libuv/include -c $< -o $@
+
 target/main.o: src/main.c src/*.h
-	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -c $< -o $@
+	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -Werror -I./deps/duktape-releases/src -I./deps/libuv/include -c $< -o $@
 
 target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/duktape.h
 	${CC} -std=c99 ${CFLAGS} -fPIC -Wall -Wextra -pedantic -c $< -o $@

@@ -1,6 +1,28 @@
-#ifndef MISC_H
-#define MISC_H
+#ifndef SEADUK_MISC
+#define SEADUK_MISC
 
-#include "duv.h"
+#ifndef MAX_TITLE_LENGTH
+#define MAX_TITLE_LENGTH (8192)
+#endif
+
+duk_ret_t duv_version(duk_context *ctx);
+duk_ret_t duv_version_string(duk_context *ctx);
+duk_ret_t duv_get_process_title(duk_context *ctx);
+duk_ret_t duv_set_process_title(duk_context *ctx);
+duk_ret_t duv_resident_set_memory(duk_context *ctx);
+duk_ret_t duv_uptime(duk_context *ctx);
+duk_ret_t duv_getrusage(duk_context *ctx);
+duk_ret_t duv_cpu_info(duk_context *ctx);
+duk_ret_t duv_interface_addresses(duk_context *ctx);
+duk_ret_t duv_loadavg(duk_context *ctx);
+duk_ret_t duv_exepath(duk_context *ctx);
+duk_ret_t duv_cwd(duk_context *ctx);
+duk_ret_t duv_os_homedir(duk_context *ctx);
+duk_ret_t duv_chdir(duk_context *ctx);
+duk_ret_t duv_get_total_memory(duk_context *ctx);
+duk_ret_t duv_hrtime(duk_context *ctx);
+duk_ret_t duv_update_time(duk_context *ctx);
+duk_ret_t duv_now(duk_context *ctx);
+duk_ret_t duv_argv(duk_context *ctx);
 
 #endif
