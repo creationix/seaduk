@@ -1,3 +1,4 @@
+#include "duv.h"
 #include "misc.h"
 
 duk_ret_t duv_guess_handle(duk_context *ctx) {
