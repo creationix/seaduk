@@ -29,11 +29,16 @@ CFLAGS=-g
 #export CC
 
 # Set this to 'so' for linux/sun or to 'dylib' for MacOS
-#ifeq ($(OS),Darwin)
+ifeq ($(OS),Windows_NT)
+   SHAREDSUFFIX=dll
+else
+   UNAME_S := $(shell uname -s)
+   ifeq ($(UNAME_S),Darwin)
 	SHAREDSUFFIX=dylib
-#else
-#	SHAREDSUFFIX=so
-#endif
+   else
+	SHAREDSUFFIX=so
+   endif
+endif
 
 LDFLAGS+=-Ltarget -luv
 
