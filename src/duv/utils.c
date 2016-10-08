@@ -125,7 +125,7 @@ void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type) {
   handle->data = ctx;
 }
 
-void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
+void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback, void* extra) {
   // Create a new container object for the request
   duk_push_object(ctx);
   // TODO: should we have a shared prototype for uv_cancel_t and toString?
@@ -138,6 +138,11 @@ void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
   // Store a reference to the lua callback
   duk_dup(ctx, callback);
   duk_put_prop_string(ctx, -2, "\xff""uv-callback");
+
+  if (extra) {
+    duk_push_pointer(ctx, extra);
+    duk_put_prop_string(ctx, -2, "\xff""uv-extra");
+  }
 
   // Store this object in the heap stack keyed by the request's pointer address.
   // This will prevent it from being garbage collected and allow us to find

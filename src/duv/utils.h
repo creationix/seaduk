@@ -23,7 +23,7 @@ void duv_check(duk_context *ctx, int status);
 void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type);
 
 // Assumes buffer is at top of stack.
-void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback);
+void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback, void* extra);
 
 // Store copy of value on top of stack using handle for key
 void duv_store_handle(duk_context *ctx, void *handle);
