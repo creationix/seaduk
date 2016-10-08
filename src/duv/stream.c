@@ -12,9 +12,7 @@ duk_ret_t duv_shutdown(duk_context *ctx) {
   uv_stream_t *stream = duv_require_this_handle(ctx, DUV_STREAM_MASK);
   uv_shutdown_t *req = duk_push_fixed_buffer(ctx, sizeof(*req));
   duv_check(ctx, uv_shutdown(req, stream, duv_on_shutdown));
-  duv_setup_request(ctx, (uv_req_t*)req, 1, 0);
-  return 0;
-  // TODO: expose req to javascript so it can be canceled?
+  return duv_setup_request(ctx, (uv_req_t*)req, 1);
 }
 
 duk_ret_t duv_listen(duk_context *ctx) {
@@ -72,9 +70,7 @@ duk_ret_t duv_write(duk_context *ctx) {
   uv_buf_t buf;
   duv_get_data(ctx, 1, &buf);
   duv_check(ctx, uv_write(req, stream, &buf, 1, duv_on_write));
-  duv_setup_request(ctx, (uv_req_t*)req, 2, 0);
-  return 0;
-  // TODO: expose req to javascript so it can be canceled?
+  return duv_setup_request(ctx, (uv_req_t*)req, 2);
   // TODO: handle case where multiple concurrent writes are in flight for a
   //       single stream.
 }

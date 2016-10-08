@@ -147,8 +147,8 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
       break;
 
     case UV_FS_SCANDIR:
-      // Expose the userdata for the request.
-      // duv_push_ref(ctx, data->req_ref);
+      // Expose the request itself.
+      duv_push_handle(ctx, req);
       break;
 
     default:
@@ -183,11 +183,19 @@ static void duv_fs_cb(uv_fs_t* req) {
   // }
 }
 
-#define FS_CALL(func, cb, extra, req, ...) {              \
-  printf(#func"(%p, ...)\n", (void*)req);                 \
+#define FS_CALL(func, cb, save, extra, req, ...) {      \
+  printf(#func"(%p, ...)\n", (void*)req);               \
   duv_check(ctx, uv_fs_##func(duv_loop(ctx), req, __VA_ARGS__, duv_fs_cb)); \
-  duv_setup_request(ctx, (uv_req_t*)req, cb, extra);      \
-  return 0;                                               \
+  duv_setup_request(ctx, (uv_req_t*)req, cb);           \
+  if (extra) {                                          \
+    duk_push_pointer(ctx, extra);                       \
+    duk_put_prop_string(ctx, -2, "\xff""uv-extra");     \
+  }                                                     \
+  if (save) {                                           \
+    duk_dup(ctx, save);                                 \
+    duk_put_prop_string(ctx, -2, "\xff""uv-save");      \
+  }                                                     \
+  return 1;                                             \
 }
 
 duk_ret_t duv_fs_close(duk_context *ctx) {
@@ -198,7 +206,7 @@ duk_ret_t duv_fs_close(duk_context *ctx) {
   });
   uv_file file = duk_get_int(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(close, 1, 0, req, file);
+  FS_CALL(close, 1, 0, 0, req, file);
 }
 
 duk_ret_t duv_fs_open(duk_context *ctx) {
@@ -213,7 +221,7 @@ duk_ret_t duv_fs_open(duk_context *ctx) {
   int flags = duv_string_to_flags(ctx, duk_get_string(ctx, 1));
   int mode = duk_get_uint(ctx, 2);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(open, 3, 0, req, path, flags, mode);
+  FS_CALL(open, 3, 0, 0, req, path, flags, mode);
 }
 
 duk_ret_t duv_fs_read(duk_context *ctx) {
@@ -231,7 +239,7 @@ duk_ret_t duv_fs_read(duk_context *ctx) {
   uv_fs_t* req;
   buf = uv_buf_init(duk_alloc(ctx, len), len);
   req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(read, 3, buf.base, req, file, &buf, 1, offset);
+  FS_CALL(read, 3, 0, buf.base, req, file, &buf, 1, offset);
 }
 
 duk_ret_t duv_fs_unlink(duk_context *ctx) {
@@ -242,35 +250,24 @@ duk_ret_t duv_fs_unlink(duk_context *ctx) {
   });
   const char* path = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(unlink, 1, 0, req, path);
+  FS_CALL(unlink, 1, 0, 0, req, path);
 }
 
-// duk_ret_t duv_fs_write(duk_context *ctx) {
-//   uv_file file;
-//   uv_buf_t buf;
-//   int64_t offset;
-//   uv_fs_t* req;
-//
-//   dschema_check(ctx, (const duv_schema_entry[]){
-//     {"fd", dschema_is_fd},
-//     {"data", dschema_is_data},
-//     {"offset", duk_is_number},
-//     {"next", dschema_is_continuation},
-//     {0,0}
-//   });
-//
-//   file = duk_get_uint(ctx, 0);
-//   duv_get_data(ctx, 1, &buf);
-//   offset = duk_get_number(ctx, 2);
-//
-//   req = duk_push_fixed_buffer(ctx, sizeof(*req));
-//   duk_dup(ctx, 1);
-//   // data->data_ref = duv_ref(ctx);
-//
-//   // req->data = data;
-//   req->ptr = buf.base;
-//   FS_CALL(write, 3, 0, req, file, &buf, 1, offset);
-// }
+duk_ret_t duv_fs_write(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]){
+    {"fd", dschema_is_fd},
+    {"data", dschema_is_data},
+    {"offset", duk_is_number},
+    {"callback", dschema_is_continuation},
+    {0,0}
+  });
+  uv_file file = duk_get_uint(ctx, 0);
+  uv_buf_t buf;
+  int64_t offset = duk_get_number(ctx, 2);;
+  uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
+  duv_get_data(ctx, 1, &buf);
+  FS_CALL(write, 3, 1, 0, req, file, &buf, 1, offset);
+}
 
 duk_ret_t duv_fs_mkdir(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
@@ -282,7 +279,7 @@ duk_ret_t duv_fs_mkdir(duk_context *ctx) {
   const char* path = duk_get_string(ctx, 0);
   int mode = duk_get_uint(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(mkdir, 2, 0, req, path, mode);
+  FS_CALL(mkdir, 2, 0, 0, req, path, mode);
 }
 
 duk_ret_t duv_fs_mkdtemp(duk_context *ctx) {
@@ -293,7 +290,7 @@ duk_ret_t duv_fs_mkdtemp(duk_context *ctx) {
   });
   const char* tpl = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(mkdtemp, 1, 0, req, tpl);
+  FS_CALL(mkdtemp, 1, 0, 0, req, tpl);
 }
 
 duk_ret_t duv_fs_rmdir(duk_context *ctx) {
@@ -304,55 +301,63 @@ duk_ret_t duv_fs_rmdir(duk_context *ctx) {
   });
   const char* path = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(rmdir, 1, 0, req, path);
+  FS_CALL(rmdir, 1, 0, 0, req, path);
 }
 
-// duk_ret_t duv_fs_scandir(duk_context *ctx) {
-//   const char* path = duk_require_string(ctx, 0);
-//   int flags = 0; // TODO: find out what these flags are.
-//   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-//   FS_CALL(scandir, 1, 0, req, path, flags);
-// }
-//
-// duk_ret_t duv_fs_scandir_next(duk_context *ctx) {
-//   uv_fs_t* req;
-//   uv_dirent_t ent;
-//   int ret;
-//   const char* type;
-//
-//   dschema_check(ctx, (const duv_schema_entry[]) {
-//     {"req", dschema_is_fd},
-//     {0,0}
-//   });
-//
-//   req = duk_get_buffer(ctx, 0, NULL);
-//   ret = uv_fs_scandir_next(req, &ent);
-//   if (ret == UV_EOF) {
-//     // duv_cleanup_req(ctx, req->data);
-//     req->data = NULL;
-//     uv_fs_req_cleanup(req);
-//     return 0;
-//   }
-//   if (ret < 0) duv_error(ctx, ret);
-//   duk_push_object(ctx);
-//   duk_push_string(ctx, ent.name);
-//   duk_put_prop_string(ctx, -2, "name");
-//   switch (ent.type) {
-//     case UV_DIRENT_UNKNOWN: type = NULL;     break;
-//     case UV_DIRENT_FILE:    type = "file";   break;
-//     case UV_DIRENT_DIR:     type = "directory";    break;
-//     case UV_DIRENT_LINK:    type = "link";   break;
-//     case UV_DIRENT_FIFO:    type = "fifo";   break;
-//     case UV_DIRENT_SOCKET:  type = "socket"; break;
-//     case UV_DIRENT_CHAR:    type = "char";   break;
-//     case UV_DIRENT_BLOCK:   type = "block";  break;
-//   }
-//   if (type) {
-//     duk_push_string(ctx, type);
-//     duk_put_prop_string(ctx, -2, "type");
-//   }
-//   return 1;
-// }
+duk_ret_t duv_fs_scandir(duk_context *ctx) {
+  // TODO: make sure this works properly
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"path", duk_is_string},
+    {"callback", dschema_is_continuation},
+    {0,0}
+  });
+  const char* path = duk_get_string(ctx, 0);
+  int flags = 0; // TODO: find out what these flags are.
+  uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
+  FS_CALL(scandir, 1, 0, 0, req, path, flags);
+}
+
+duk_ret_t duv_fs_scandir_next(duk_context *ctx) {
+  // TODO: schema check
+  // TODO: make sure this works properly
+  uv_fs_t* req;
+  uv_dirent_t ent;
+  int ret;
+  const char* type;
+
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"req", dschema_is_fd},
+    {0,0}
+  });
+
+  req = duk_get_buffer(ctx, 0, NULL);
+  ret = uv_fs_scandir_next(req, &ent);
+  if (ret == UV_EOF) {
+    // duv_cleanup_req(ctx, req->data);
+    req->data = NULL;
+    uv_fs_req_cleanup(req);
+    return 0;
+  }
+  if (ret < 0) duv_error(ctx, ret);
+  duk_push_object(ctx);
+  duk_push_string(ctx, ent.name);
+  duk_put_prop_string(ctx, -2, "name");
+  switch (ent.type) {
+    case UV_DIRENT_UNKNOWN: type = NULL;     break;
+    case UV_DIRENT_FILE:    type = "file";   break;
+    case UV_DIRENT_DIR:     type = "directory";    break;
+    case UV_DIRENT_LINK:    type = "link";   break;
+    case UV_DIRENT_FIFO:    type = "fifo";   break;
+    case UV_DIRENT_SOCKET:  type = "socket"; break;
+    case UV_DIRENT_CHAR:    type = "char";   break;
+    case UV_DIRENT_BLOCK:   type = "block";  break;
+  }
+  if (type) {
+    duk_push_string(ctx, type);
+    duk_put_prop_string(ctx, -2, "type");
+  }
+  return 1;
+}
 
 duk_ret_t duv_fs_stat(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
@@ -362,7 +367,7 @@ duk_ret_t duv_fs_stat(duk_context *ctx) {
   });
   const char* path = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(stat, 1, 0, req, path);
+  FS_CALL(stat, 1, 0, 0, req, path);
 }
 
 duk_ret_t duv_fs_fstat(duk_context *ctx) {
@@ -373,7 +378,7 @@ duk_ret_t duv_fs_fstat(duk_context *ctx) {
   });
   uv_file file = duk_get_uint(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(fstat, 1, 0, req, file);
+  FS_CALL(fstat, 1, 0, 0, req, file);
 }
 
 duk_ret_t duv_fs_lstat(duk_context *ctx) {
@@ -384,7 +389,7 @@ duk_ret_t duv_fs_lstat(duk_context *ctx) {
   });
   const char* path = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(lstat, 1, 0, req, path);
+  FS_CALL(lstat, 1, 0, 0, req, path);
 }
 
 duk_ret_t duv_fs_rename(duk_context *ctx) {
@@ -397,7 +402,7 @@ duk_ret_t duv_fs_rename(duk_context *ctx) {
   const char* path = duk_get_string(ctx, 0);
   const char* new_path = duk_get_string(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(rename, 2, 0, req, path, new_path);
+  FS_CALL(rename, 2, 0, 0, req, path, new_path);
 }
 
 duk_ret_t duv_fs_fsync(duk_context *ctx) {
@@ -408,7 +413,7 @@ duk_ret_t duv_fs_fsync(duk_context *ctx) {
   });
   uv_file file = duk_get_uint(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(fsync, 1, 0, req, file);
+  FS_CALL(fsync, 1, 0, 0, req, file);
 }
 
 duk_ret_t duv_fs_fdatasync(duk_context *ctx) {
@@ -419,7 +424,7 @@ duk_ret_t duv_fs_fdatasync(duk_context *ctx) {
   });
   uv_file file = duk_get_uint(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(fdatasync, 1, 0, req, file);
+  FS_CALL(fdatasync, 1, 0, 0, req, file);
 }
 
 duk_ret_t duv_fs_ftruncate(duk_context *ctx) {
@@ -432,7 +437,7 @@ duk_ret_t duv_fs_ftruncate(duk_context *ctx) {
   uv_file file = duk_get_uint(ctx, 0);
   int64_t offset = duk_get_uint(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(ftruncate, 2, 0, req, file, offset);
+  FS_CALL(ftruncate, 2, 0, 0, req, file, offset);
 }
 
 duk_ret_t duv_fs_sendfile(duk_context *ctx) {
@@ -449,7 +454,7 @@ duk_ret_t duv_fs_sendfile(duk_context *ctx) {
   int64_t in_offset = duk_get_uint(ctx, 2);
   size_t length = duk_get_uint(ctx, 3);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(sendfile, 4, 0, req, out_fd, in_fd, in_offset, length);
+  FS_CALL(sendfile, 4, 0, 0, req, out_fd, in_fd, in_offset, length);
 }
 
 duk_ret_t duv_fs_access(duk_context *ctx) {
@@ -474,7 +479,7 @@ duk_ret_t duv_fs_access(duk_context *ctx) {
     }
   }
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(access, 2, 0, req, path, flags);
+  FS_CALL(access, 2, 0, 0, req, path, flags);
 }
 
 duk_ret_t duv_fs_chmod(duk_context *ctx) {
@@ -487,7 +492,7 @@ duk_ret_t duv_fs_chmod(duk_context *ctx) {
   const char* path = duk_get_string(ctx, 0);
   int mode = duk_get_uint(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(chmod, 2, 0, req, path, mode);
+  FS_CALL(chmod, 2, 0, 0, req, path, mode);
 }
 
 duk_ret_t duv_fs_fchmod(duk_context *ctx) {
@@ -500,7 +505,7 @@ duk_ret_t duv_fs_fchmod(duk_context *ctx) {
   uv_file file = duk_get_uint(ctx, 0);
   int mode = duk_get_uint(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(fchmod, 2, 0, req, file, mode);
+  FS_CALL(fchmod, 2, 0, 0, req, file, mode);
 }
 
 duk_ret_t duv_fs_utime(duk_context *ctx) {
@@ -515,7 +520,7 @@ duk_ret_t duv_fs_utime(duk_context *ctx) {
   double atime = duk_get_number(ctx, 1);
   double mtime = duk_get_number(ctx, 2);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(utime, 3, 0, req, path, atime, mtime);
+  FS_CALL(utime, 3, 0, 0, req, path, atime, mtime);
 }
 
 duk_ret_t duv_fs_futime(duk_context *ctx) {
@@ -530,7 +535,7 @@ duk_ret_t duv_fs_futime(duk_context *ctx) {
   double atime = duk_get_number(ctx, 1);
   double mtime = duk_get_number(ctx, 2);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(futime, 3, 0, req, file, atime, mtime);
+  FS_CALL(futime, 3, 0, 0, req, file, atime, mtime);
 }
 
 duk_ret_t duv_fs_link(duk_context *ctx) {
@@ -543,7 +548,7 @@ duk_ret_t duv_fs_link(duk_context *ctx) {
   const char* path = duk_get_string(ctx, 0);
   const char* new_path = duk_get_string(ctx, 1);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(link, 2, 0, req, path, new_path);
+  FS_CALL(link, 2, 0, 0, req, path, new_path);
 }
 
 duk_ret_t duv_fs_symlink(duk_context *ctx) {
@@ -560,7 +565,7 @@ duk_ret_t duv_fs_symlink(duk_context *ctx) {
     duk_pop(ctx);
   }
   req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(symlink, 3, 0, req, path, new_path, flags);
+  FS_CALL(symlink, 3, 0, 0, req, path, new_path, flags);
 }
 
 duk_ret_t duv_fs_readlink(duk_context *ctx) {
@@ -571,7 +576,7 @@ duk_ret_t duv_fs_readlink(duk_context *ctx) {
   });
   const char* path = duk_get_string(ctx, 0);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(readlink, 1, 0, req, path);
+  FS_CALL(readlink, 1, 0, 0, req, path);
 }
 
 duk_ret_t duv_fs_chown(duk_context *ctx) {
@@ -586,7 +591,7 @@ duk_ret_t duv_fs_chown(duk_context *ctx) {
   uv_uid_t uid = duk_get_uint(ctx, 1);
   uv_uid_t gid = duk_get_uint(ctx, 2);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(chown, 3, 0, req, path, uid, gid);
+  FS_CALL(chown, 3, 0, 0, req, path, uid, gid);
 }
 
 duk_ret_t duv_fs_fchown(duk_context *ctx) {
@@ -601,5 +606,5 @@ duk_ret_t duv_fs_fchown(duk_context *ctx) {
   uv_uid_t uid = duk_get_uint(ctx, 1);
   uv_uid_t gid = duk_get_uint(ctx, 2);
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
-  FS_CALL(fchown, 3, 0, req, file, uid, gid);
+  FS_CALL(fchown, 3, 0, 0, req, file, uid, gid);
 }
