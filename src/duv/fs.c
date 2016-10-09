@@ -147,8 +147,32 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
       break;
 
     case UV_FS_SCANDIR:
-      // Expose the request itself.
-      duv_push_handle(ctx, req);
+      duk_push_array(ctx);
+      int ret;
+      uv_dirent_t ent;
+      unsigned int i = 0;
+      while ((ret = uv_fs_scandir_next(req, &ent)) != UV_EOF) {
+        if (ret < 0) duv_error(ctx, ret);
+        duk_push_object(ctx);
+        duk_push_string(ctx, ent.name);
+        duk_put_prop_string(ctx, -2, "name");
+        const char* type;
+        switch (ent.type) {
+          case UV_DIRENT_UNKNOWN: type = NULL;     break;
+          case UV_DIRENT_FILE:    type = "file";   break;
+          case UV_DIRENT_DIR:     type = "directory";    break;
+          case UV_DIRENT_LINK:    type = "link";   break;
+          case UV_DIRENT_FIFO:    type = "fifo";   break;
+          case UV_DIRENT_SOCKET:  type = "socket"; break;
+          case UV_DIRENT_CHAR:    type = "char";   break;
+          case UV_DIRENT_BLOCK:   type = "block";  break;
+        }
+        if (type) {
+          duk_push_string(ctx, type);
+          duk_put_prop_string(ctx, -2, "type");
+        }
+        duk_put_prop_index(ctx, -2, i++);
+      }
       break;
 
     default:
@@ -305,7 +329,6 @@ duk_ret_t duv_fs_rmdir(duk_context *ctx) {
 }
 
 duk_ret_t duv_fs_scandir(duk_context *ctx) {
-  // TODO: make sure this works properly
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"path", duk_is_string},
     {"callback", dschema_is_continuation},
@@ -315,48 +338,6 @@ duk_ret_t duv_fs_scandir(duk_context *ctx) {
   int flags = 0; // TODO: find out what these flags are.
   uv_fs_t* req = duk_push_fixed_buffer(ctx, sizeof(*req));
   FS_CALL(scandir, 1, 0, 0, req, path, flags);
-}
-
-duk_ret_t duv_fs_scandir_next(duk_context *ctx) {
-  // TODO: schema check
-  // TODO: make sure this works properly
-  uv_fs_t* req;
-  uv_dirent_t ent;
-  int ret;
-  const char* type;
-
-  dschema_check(ctx, (const duv_schema_entry[]) {
-    {"req", dschema_is_fd},
-    {0,0}
-  });
-
-  req = duk_get_buffer(ctx, 0, NULL);
-  ret = uv_fs_scandir_next(req, &ent);
-  if (ret == UV_EOF) {
-    // duv_cleanup_req(ctx, req->data);
-    req->data = NULL;
-    uv_fs_req_cleanup(req);
-    return 0;
-  }
-  if (ret < 0) duv_error(ctx, ret);
-  duk_push_object(ctx);
-  duk_push_string(ctx, ent.name);
-  duk_put_prop_string(ctx, -2, "name");
-  switch (ent.type) {
-    case UV_DIRENT_UNKNOWN: type = NULL;     break;
-    case UV_DIRENT_FILE:    type = "file";   break;
-    case UV_DIRENT_DIR:     type = "directory";    break;
-    case UV_DIRENT_LINK:    type = "link";   break;
-    case UV_DIRENT_FIFO:    type = "fifo";   break;
-    case UV_DIRENT_SOCKET:  type = "socket"; break;
-    case UV_DIRENT_CHAR:    type = "char";   break;
-    case UV_DIRENT_BLOCK:   type = "block";  break;
-  }
-  if (type) {
-    duk_push_string(ctx, type);
-    duk_put_prop_string(ctx, -2, "type");
-  }
-  return 1;
 }
 
 duk_ret_t duv_fs_stat(duk_context *ctx) {

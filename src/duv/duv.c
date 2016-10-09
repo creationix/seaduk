@@ -128,7 +128,6 @@ static const duk_function_list_entry duv_funcs[] = {
   {"fs_mkdtemp", duv_fs_mkdtemp, 2},
   {"fs_rmdir", duv_fs_rmdir, 2},
   {"fs_scandir", duv_fs_scandir, 2},
-  {"fs_scandir_next", duv_fs_scandir_next, 1},
   {"fs_stat", duv_fs_stat, 2},
   {"fs_fstat", duv_fs_fstat, 2},
   {"fs_lstat", duv_fs_lstat, 2},

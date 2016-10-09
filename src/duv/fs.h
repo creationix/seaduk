@@ -12,7 +12,6 @@ duk_ret_t duv_fs_mkdir(duk_context *ctx);
 duk_ret_t duv_fs_mkdtemp(duk_context *ctx);
 duk_ret_t duv_fs_rmdir(duk_context *ctx);
 duk_ret_t duv_fs_scandir(duk_context *ctx);
-duk_ret_t duv_fs_scandir_next(duk_context *ctx);
 duk_ret_t duv_fs_stat(duk_context *ctx);
 duk_ret_t duv_fs_fstat(duk_context *ctx);
 duk_ret_t duv_fs_lstat(duk_context *ctx);
