@@ -147,18 +147,15 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
       break;
 
     case UV_FS_SCANDIR:
-      duk_push_array(ctx);
+      duk_push_object(ctx);
       int ret;
       uv_dirent_t ent;
-      unsigned int i = 0;
       while ((ret = uv_fs_scandir_next(req, &ent)) != UV_EOF) {
         if (ret < 0) duv_error(ctx, ret);
-        duk_push_object(ctx);
         duk_push_string(ctx, ent.name);
-        duk_put_prop_string(ctx, -2, "name");
         const char* type;
         switch (ent.type) {
-          case UV_DIRENT_UNKNOWN: type = NULL;     break;
+          case UV_DIRENT_UNKNOWN: type = "unknown"; break;
           case UV_DIRENT_FILE:    type = "file";   break;
           case UV_DIRENT_DIR:     type = "directory";    break;
           case UV_DIRENT_LINK:    type = "link";   break;
@@ -167,11 +164,8 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
           case UV_DIRENT_CHAR:    type = "char";   break;
           case UV_DIRENT_BLOCK:   type = "block";  break;
         }
-        if (type) {
-          duk_push_string(ctx, type);
-          duk_put_prop_string(ctx, -2, "type");
-        }
-        duk_put_prop_index(ctx, -2, i++);
+        duk_push_string(ctx, type);
+        duk_put_prop(ctx, -3);
       }
       break;
 

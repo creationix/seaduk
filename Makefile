@@ -41,6 +41,7 @@ LIBS=\
 DUV_LIBS=\
 	target/duv_loop.o\
 	target/duv_handle.o\
+	target/duv_req.o\
 	target/duv_timer.o\
 	target/duv_prepare.o\
 	target/duv_check.o\
@@ -170,7 +171,7 @@ target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/
 target/miniz.o: deps/miniz.c
 	${CC} -std=gnu99 ${CFLAGS} -c $< -o $@
 
-target/libuv.a: ${LIBUV}/.libs/libuv.a 
+target/libuv.a: ${LIBUV}/.libs/libuv.a
 	cp $< $@
 
 target/libuv.so: ${LIBUV}/.libs/libuv.so
@@ -193,7 +194,7 @@ init-libuv:
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
-	
+
 ${LIBUV}/.libs/libuv.so: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
 
