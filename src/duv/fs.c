@@ -183,7 +183,6 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
 }
 
 static void duv_fs_cb(uv_fs_t* req) {
-  printf("duv_fs_cb(req=%p, req->result=%ld)\n", (void*)req, req->result);
   duk_context *ctx = req->data;
   int nargs;
 
@@ -197,7 +196,6 @@ static void duv_fs_cb(uv_fs_t* req) {
     nargs = 2;
   }
 
-  duk_dump_context_stderr(ctx);
   duv_resolve((uv_req_t*)req, nargs);
 
   // duv_fulfill_req(ctx, (uv_req_t*)req, nargs);
@@ -208,7 +206,6 @@ static void duv_fs_cb(uv_fs_t* req) {
 }
 
 #define FS_CALL(func, cb, save, extra, req, ...) {      \
-  printf(#func"(%p, ...)\n", (void*)req);               \
   duv_check(ctx, uv_fs_##func(duv_loop(ctx), req, __VA_ARGS__, duv_fs_cb)); \
   duv_setup_request(ctx, (uv_req_t*)req, cb);           \
   if (extra) {                                          \

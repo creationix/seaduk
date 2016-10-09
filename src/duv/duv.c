@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "loop.h"
 #include "handle.h"
+#include "req.h"
 #include "timer.h"
 #include "prepare.h"
 #include "check.h"
@@ -13,6 +14,13 @@
 #include "tty.h"
 #include "misc.h"
 #include "fs.h"
+
+static const duk_function_list_entry duv_req_methods[] = {
+  {"inspect", duv_req_tostring, 0},
+  {"toString", duv_req_tostring, 0},
+  {"cancel", duv_cancel, 0},
+  {0,0,0}
+};
 
 static const duk_function_list_entry duv_handle_methods[] = {
   {"inspect", duv_tostring, 0},
@@ -185,6 +193,13 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_put_function_list(ctx, -1, duv_funcs);
 
   // stack: nucleus uv
+
+  // uv.Req.prototype
+  duk_push_heap_stash(ctx);
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_req_methods);
+  duk_put_prop_string(ctx, -2, "req-prototype");
+  duk_pop(ctx);
 
   // uv.Handle.prototype
   duk_push_object(ctx);

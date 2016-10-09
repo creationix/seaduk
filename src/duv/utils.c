@@ -140,13 +140,20 @@ void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type) {
 }
 
 duk_ret_t duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
-  // Create a new container object for the request
+  // Create a new container object for the request with request methods
   duk_push_object(ctx);
-  // TODO: we should have a shared prototype for uv_cancel_t and toString
+  duk_push_heap_stash(ctx);
+  duk_get_prop_string(ctx, -1, "req-prototype");
+  duk_remove(ctx, -2);
+  duk_set_prototype(ctx, -2);
 
   // Set buffer as uv-data internal property.
   duk_insert(ctx, -2);
   duk_put_prop_string(ctx, -2, "\xff""uv-data");
+
+  // Store the request type.
+  duk_push_int(ctx, req->type);
+  duk_put_prop_string(ctx, -2, "\xff""req-type");
 
   // Store a reference to the lua callback
   duk_dup(ctx, callback);
