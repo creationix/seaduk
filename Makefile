@@ -3,17 +3,17 @@
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
 #
-UVSRC=system
 #UVSRC=pkg-config
-#UVSRC=git
+UVSRC=git
 
-CC=cc
+CC=musl-gcc -static
+export CC
 
 #
 # Define buildtype : shared or static
 #
-#BUILDTYPE=static
-BUILDTYPE=shared
+BUILDTYPE=static
+#BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
@@ -36,7 +36,14 @@ LIBS=\
 	target/path.o\
 	target/miniz.o\
 	target/libduv.a\
+	target/mbed.a\
 	target/duktape.o
+
+MBED_LIBS=\
+	target/mbed_md5.o \
+  target/mbed_sha1.o\
+	target/mbed_sha256.o\
+	target/mbed_sha512.o
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -72,6 +79,7 @@ DUV_HEADER=\
 
 
 LIBUV=deps/libuv
+MBEDTLS=deps/mbedtls
 
 ifeq ($(BUILDTYPE), shared)
    CFLAGS+=-fPIC
@@ -90,7 +98,7 @@ endif
 ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
 endif
-
+CFLAGS+=-I${MBEDTLS}/include
 
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}
@@ -181,8 +189,14 @@ target/libuv.so: ${LIBUV}/.libs/libuv.so
 target/libduv.a: ${DUV_LIBS}
 	${AR} cr $@ ${DUV_LIBS}
 
+target/mbed.a: ${MBED_LIBS}
+	${AR} cr $@ ${MBED_LIBS}
+
 target/duv_%.o: src/duv/%.c src/duv/%.h
 	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
+
+target/mbed_%.o: deps/mbedtls/library/%.c deps/mbedtls/include/mbedtls/%.h
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/mbedtls/include -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases
