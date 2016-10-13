@@ -4,3 +4,6 @@
 [submodule "deps/duktape-releases"]
 	path = deps/duktape-releases
 	url = https://github.com/svaarala/duktape-releases.git
+[submodule "deps/mbedtls"]
+	path = deps/mbedtls
+	url = https://github.com/ARMmbed/mbedtls.git

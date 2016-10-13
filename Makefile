@@ -34,7 +34,14 @@ LIBS=\
 	target/path.o\
 	target/miniz.o\
 	target/libduv.a\
+	target/mbed.a\
 	target/duktape.o
+
+MBED_LIBS=\
+	target/mbed_md5.o \
+  target/mbed_sha1.o\
+	target/mbed_sha256.o\
+	target/mbed_sha512.o
 
 DUV_LIBS=\
 	target/duv_loop.o\
@@ -70,6 +77,7 @@ DUV_HEADER=\
 
 
 LIBUV=deps/libuv
+MBEDTLS=deps/mbedtls
 
 ifeq ($(BUILDTYPE), shared)
    CFLAGS+=-fPIC
@@ -88,6 +96,7 @@ endif
 ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
 endif
+CFLAGS+=-I${MBEDTLS}/include
 
 
 all:		all-${BUILDTYPE}
@@ -186,6 +195,12 @@ target/libduv.a: ${DUV_LIBS}
 
 target/duv_%.o: src/duv/%.c src/duv/%.h
 	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
+
+target/mbed.a: ${MBED_LIBS}
+	${AR} cr $@ ${MBED_LIBS}
+
+target/mbed_%.o: deps/mbedtls/library/%.c deps/mbedtls/include/mbedtls/%.h
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/mbedtls/include -o $@
 
 init-duktape:
 	git submodule init deps/duktape-releases
