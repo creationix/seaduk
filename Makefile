@@ -37,6 +37,7 @@ LIBS=\
 	target/miniz.o\
 	target/libduv.a\
 	target/mbed.a\
+	target/http-parser.o\
 	target/duktape.o
 
 MBED_LIBS=\
@@ -123,7 +124,12 @@ target/nucleus: ${BINS} ${LIBS}
 install-static: install-bin install-lib-static install-header
 install-shared : install-bin install-lib-shared install-header
 
-install-bin: target/nucleus
+target/nucleus-tiny: target/nucleus
+	cp $< $@
+	strip $@
+	upx $@
+
+install-bin: target/nucleus-tiny
 	install $< /usr/local/bin/
 
 install-lib-static: target/libduv.a
@@ -178,6 +184,9 @@ target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/
 
 target/miniz.o: deps/miniz.c
 	${CC} -std=gnu99 ${CFLAGS} -c $< -o $@
+
+target/http-parser.o: deps/http-parser/http_parser.c
+	${CC} -std=c99 ${CFLAGS} -Wall -Wextra -pedantic -c $< -o $@
 
 target/libuv.a: ${LIBUV}/.libs/libuv.a
 	cp $< $@

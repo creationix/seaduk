@@ -320,7 +320,12 @@ static void compile(duk_context *ctx, const char* code, const char* name) {
 }
 
 static duk_ret_t nucleus_compile(duk_context *ctx) {
-  compile(ctx, duk_require_string(ctx, 0), duk_require_string(ctx, 1));
+  duk_compile(ctx, 0);
+  return 1;
+}
+
+static duk_ret_t nucleus_compile_function(duk_context *ctx) {
+  duk_compile(ctx, DUK_COMPILE_FUNCTION);
   return 1;
 }
 
@@ -351,6 +356,7 @@ static const duk_function_list_entry nucleus_functions[] = {
   {"unsetenv", env_unset, 1},
   {"exit", nucleus_exit, 1},
   {"compile", nucleus_compile, 2},
+  {"compileFunction", nucleus_compile_function, 2},
   {"readfile", nucleus_readfile, 1},
   {"scandir", nucleus_scandir, 2},
   {"dofile", nucleus_dofile, 1},
