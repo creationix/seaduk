@@ -42,15 +42,18 @@ static duk_ret_t nucleus_inflate(duk_context *ctx) {
   uint8_t* out = duk_push_fixed_buffer(ctx, size);
 
   size_t in_size = buf.len - offset;
+  size_t out_size = size;
   tinfl_decompressor decomp;
   tinfl_status status;
   tinfl_init(&decomp);
-  status = tinfl_decompress(&decomp, (uint8_t*)(buf.base + offset), &in_size, out, out, &size, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF | TINFL_FLAG_PARSE_ZLIB_HEADER);
+  status = tinfl_decompress(&decomp, (uint8_t*)(buf.base + offset), &in_size, out, out, &out_size, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF | TINFL_FLAG_PARSE_ZLIB_HEADER);
   if (status == TINFL_STATUS_NEEDS_MORE_INPUT) return 0;
   if (status < 0) {
-    duk_error(ctx, DUK_ERR_ERROR, "Error inflating stream");
+    duk_error(ctx, DUK_ERR_ERROR, "Error inflating stream: %d", status);
   }
-
+  if (out_size != size) {
+    duk_error(ctx, DUK_ERR_ERROR, "Size mismatch");
+  }
 
   duk_push_array(ctx);
   duk_insert(ctx, -2);
