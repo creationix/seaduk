@@ -27,6 +27,41 @@ enum build_mode {
   BUILD_EMBEDDED
 };
 
+// nucleus.inflate(data, size) -> [inflated, number consumed] (nothing if more data needed)
+static duk_ret_t nucleus_inflate(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {"offset", duk_is_number},
+    {"size", duk_is_number},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  size_t offset = duk_get_int(ctx, 1);
+  size_t size = duk_get_int(ctx, 2);
+  uint8_t* out = duk_push_fixed_buffer(ctx, size);
+
+  size_t in_size = buf.len - offset;
+  tinfl_decompressor decomp;
+  tinfl_status status;
+  tinfl_init(&decomp);
+  status = tinfl_decompress(&decomp, (uint8_t*)(buf.base + offset), &in_size, out, out, &size, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF | TINFL_FLAG_PARSE_ZLIB_HEADER);
+  if (status == TINFL_STATUS_NEEDS_MORE_INPUT) return 0;
+  if (status < 0) {
+    duk_error(ctx, DUK_ERR_ERROR, "Error inflating stream");
+  }
+
+
+  duk_push_array(ctx);
+  duk_insert(ctx, -2);
+  duk_put_prop_index(ctx, -2, 0);
+  duk_push_int(ctx, in_size);
+  duk_put_prop_index(ctx, -2, 1);
+
+  return 1;
+}
+
+
 static duk_ret_t nucleus_md5(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"data", dschema_is_data},
@@ -361,6 +396,7 @@ static const duk_function_list_entry nucleus_functions[] = {
   {"scandir", nucleus_scandir, 2},
   {"dofile", nucleus_dofile, 1},
   {"pathjoin", duv_path_join, DUK_VARARGS},
+  {"inflate", nucleus_inflate, 3},
   {"md5", nucleus_md5, 1},
   {"sha1", nucleus_sha1, 1},
   {"sha256", nucleus_sha256, 1},
