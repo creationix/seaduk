@@ -432,8 +432,7 @@ typedef int mz_bool;
 #define MZ_FALSE (0)
 #define MZ_TRUE (1)
 
-// Works around MSVC's spammy "warning C4127: conditional expression is constant" message.
-#define MZ_MACRO_END while (0, 0)
+#define MZ_MACRO_END while (0)
 
 // ------------------- ZIP archive reading/writing
 
