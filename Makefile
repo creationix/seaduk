@@ -38,7 +38,8 @@ LIBS=\
 	target/libduv.a\
 	target/mbed.a\
 	target/http-parser.o\
-	target/duktape.o
+	target/duktape.o\
+	deps/zlib/libz.a
 
 MBED_LIBS=\
 	target/mbed_md5.o \
@@ -100,6 +101,8 @@ ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
 endif
 CFLAGS+=-I${MBEDTLS}/include
+CFLAGS+=-Ideps/zlib
+
 
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}

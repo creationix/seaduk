@@ -21,13 +21,27 @@
 #include <mbedtls/sha256.h>
 #include <mbedtls/sha512.h>
 
+#include <zlib.h>
+
 enum build_mode {
   BUILD_LINKED,
   BUILD_ZIP,
   BUILD_EMBEDDED
 };
 
-// nucleus.inflate(data, size) -> [inflated, number consumed] (nothing if more data needed)
+static const char* tinfl_status_to_string(tinfl_status status) {
+  switch (status) {
+    case TINFL_STATUS_BAD_PARAM: return "TINFL_STATUS_BAD_PARAM";
+    case TINFL_STATUS_ADLER32_MISMATCH: return "TINFL_STATUS_ADLER32_MISMATCH";
+    case TINFL_STATUS_FAILED: return "TINFL_STATUS_FAILED";
+    case TINFL_STATUS_DONE: return "TINFL_STATUS_DONE";
+    case TINFL_STATUS_NEEDS_MORE_INPUT: return "TINFL_STATUS_NEEDS_MORE_INPUT";
+    case TINFL_STATUS_HAS_MORE_OUTPUT: return "TINFL_STATUS_HAS_MORE_OUTPUT";
+  }
+  return NULL;
+}
+
+// nucleus.inflate(data, offset, size) -> [inflated, offset]?
 static duk_ret_t nucleus_inflate(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"data", dschema_is_data},
@@ -46,12 +60,17 @@ static duk_ret_t nucleus_inflate(duk_context *ctx) {
   tinfl_decompressor decomp;
   tinfl_status status;
   tinfl_init(&decomp);
-  status = tinfl_decompress(&decomp, (uint8_t*)(buf.base + offset), &in_size, out, out, &out_size, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF | TINFL_FLAG_PARSE_ZLIB_HEADER);
+  printf("base=%p offset=%lu\n", (void*)buf.base, offset);
+  uint8_t* source = (uint8_t*)(buf.base + offset);
+  status = tinfl_decompress(&decomp, source, &in_size, out, out, &out_size, TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF | TINFL_FLAG_PARSE_ZLIB_HEADER);
+  printf("status: %s\n", tinfl_status_to_string(status));
   if (status == TINFL_STATUS_NEEDS_MORE_INPUT) return 0;
   if (status < 0) {
-    duk_error(ctx, DUK_ERR_ERROR, "Error inflating stream: %d", status);
+    printf("offset:%lu, in_size: %lu, out_size: %lu\n", offset, in_size, out_size);
+    duk_error(ctx, DUK_ERR_ERROR, "Error inflating stream: %s", tinfl_status_to_string(status));
   }
   if (out_size != size) {
+    printf("out_size=%lu size=%lu\n", out_size, size);
     duk_error(ctx, DUK_ERR_ERROR, "Size mismatch");
   }
 
@@ -61,6 +80,65 @@ static duk_ret_t nucleus_inflate(duk_context *ctx) {
   duk_push_int(ctx, in_size);
   duk_put_prop_index(ctx, -2, 1);
 
+  return 1;
+}
+
+// nucleus.zinflate(data, offset, size) -> [inflated, offset]?
+static duk_ret_t nucleus_zinflate(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {"offset", duk_is_number},
+    {"size", duk_is_number},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  size_t offset = duk_get_int(ctx, 1);
+  size_t size = duk_get_int(ctx, 2);
+  uint8_t* out = duk_push_fixed_buffer(ctx, size);
+
+  // Initialize inflater stream
+  z_stream strm;
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  strm.avail_in = 0;
+  strm.next_in = Z_NULL;
+  int ret = inflateInit(&strm);
+  if (ret != Z_OK) {
+    duk_error(ctx, DUK_ERR_ERROR, "Problem initializing zlib inflate: %d", ret);
+  }
+  // Hook up input buffer
+  strm.avail_in = buf.len - offset;
+  strm.next_in = (uint8_t*)(buf.base + offset);
+  // Hook up output buffer
+  strm.avail_out = size;
+  strm.next_out = out;
+
+  ret = inflate(&strm, 0/*|Z_NO_FLUSH*/);
+  if (ret < 0) {
+    (void)inflateEnd(&strm);
+    duk_error(ctx, DUK_ERR_ERROR, "Problem during zlib inflate: %d", ret);
+  }
+
+  if (ret != Z_STREAM_END) {
+    (void)inflateEnd(&strm);
+    return 0;
+  }
+
+  if (strm.total_out != size) {
+    // printf("SIZE MISMATCH!! expected:%lu actual:%lu\n", size, strm.total_out);
+    // duk_error(ctx, DUK_ERR_ERROR, "Size mismatch during zlib inflate");
+  }
+
+  duk_push_array(ctx);
+  duk_insert(ctx, -2);
+  duk_put_prop_index(ctx, -2, 0);
+  duk_push_int(ctx, strm.total_in);
+  duk_put_prop_index(ctx, -2, 1);
+
+  /* clean up and return */
+  (void)inflateEnd(&strm);
   return 1;
 }
 
@@ -400,6 +478,7 @@ static const duk_function_list_entry nucleus_functions[] = {
   {"dofile", nucleus_dofile, 1},
   {"pathjoin", duv_path_join, DUK_VARARGS},
   {"inflate", nucleus_inflate, 3},
+  {"zinflate", nucleus_zinflate, 3},
   {"md5", nucleus_md5, 1},
   {"sha1", nucleus_sha1, 1},
   {"sha256", nucleus_sha256, 1},
