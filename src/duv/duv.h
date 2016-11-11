@@ -21,6 +21,7 @@ typedef enum {
   DUV_PIPE,
   DUV_TTY,
   DUV_UDP,
+  DUV_DNS,
   DUV_FS_EVENT,
   DUV_FS_POLL,
 } duv_type_t;
@@ -39,6 +40,7 @@ typedef enum {
     1 << DUV_PIPE |
     1 << DUV_TTY |
     1 << DUV_UDP |
+    1 << DUV_DNS |
     1 << DUV_FS_EVENT |
     1 << DUV_FS_POLL,
   DUV_TIMER_MASK = 1 << DUV_TIMER,
@@ -54,6 +56,7 @@ typedef enum {
   DUV_PIPE_MASK = 1 << DUV_PIPE,
   DUV_TTY_MASK = 1 << DUV_TTY,
   DUV_UDP_MASK = 1 << DUV_UDP,
+  DUV_DNS_MASK = 1 << DUV_DNS,
   DUV_FS_EVENT_MASK = 1 << DUV_FS_EVENT,
   DUV_FS_POLL_MASK = 1 << DUV_FS_POLL,
 } duv_type_mask_t;

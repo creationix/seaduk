@@ -47,6 +47,7 @@ const char* duv_type_to_string(duv_type_t type) {
     case DUV_PROCESS: return "uv_process_t";
     case DUV_TCP: return "uv_tcp_t";
     case DUV_UDP: return "uv_udp_t";
+    case DUV_DNS: return "uv_dns_t";
     case DUV_PIPE: return "uv_pipe_t";
     case DUV_TTY: return "uv_tty_t";
     case DUV_FS_EVENT: return "uv_fs_event_t";
@@ -68,6 +69,7 @@ const char* duv_mask_to_string(duv_type_mask_t mask) {
     case DUV_STREAM_MASK: return "uv_stream_t";
     case DUV_TCP_MASK: return "uv_tcp_t";
     case DUV_UDP_MASK: return "uv_udp_t";
+    case DUV_DNS_MASK: return "uv_dns_t";
     case DUV_PIPE_MASK: return "uv_pipe_t";
     case DUV_TTY_MASK: return "uv_tty_t";
     case DUV_FS_EVENT_MASK: return "uv_fs_event_t";

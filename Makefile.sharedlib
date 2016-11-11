@@ -60,6 +60,7 @@ DUV_LIBS=\
 	target/duv_check.o\
 	target/duv_idle.o\
 	target/duv_async.o\
+	target/duv_dns.o\
 	target/duv_poll.o\
 	target/duv_signal.o\
 	target/duv_process.o\

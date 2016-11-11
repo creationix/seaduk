@@ -9,6 +9,7 @@
 #include "async.h"
 #include "stream.h"
 #include "tcp.h"
+#include "dns.h"
 #include "udp.h"
 #include "pipe.h"
 #include "tty.h"
@@ -55,6 +56,12 @@ static const duk_function_list_entry duv_idle_methods[] = {
 
 static const duk_function_list_entry duv_async_methods[] = {
   {"send", duv_async_send, 0},
+  {0,0,0}
+};
+
+static const duk_function_list_entry duv_dns_methods[] = {
+  {"lookup_sync", duv_lookup_sync, 1},
+  {"resolve_sync", duv_resolve_sync, 1},
   {0,0,0}
 };
 
@@ -125,6 +132,7 @@ static const duk_function_list_entry duv_funcs[] = {
   {"Async", duv_new_async, 1},
   {"Tcp", duv_new_tcp, 0},
   {"Udp", duv_new_udp, 0},
+  {"Dns", duv_new_dns, 0},
   {"Pipe", duv_new_pipe, 1},
   {"Tty", duv_new_tty, 2},
 
@@ -253,6 +261,15 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_get_prop_string(ctx, -2, "Async");
   duk_push_object(ctx);
   duk_put_function_list(ctx, -1, duv_async_methods);
+  duk_dup(ctx, -3);
+  duk_set_prototype(ctx, -2);
+  duk_put_prop_string(ctx, -2, "prototype");
+  duk_pop(ctx);
+
+  // uv.DNS.prototype
+  duk_get_prop_string(ctx, -2, "Dns");
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_dns_methods);
   duk_dup(ctx, -3);
   duk_set_prototype(ctx, -2);
   duk_put_prop_string(ctx, -2, "prototype");
