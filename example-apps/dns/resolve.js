@@ -1,15 +1,16 @@
-var p = nucleus.dofile('deps/utils.js').prettyPrint;
 var uv = nucleus.uv;
 
 // TODO : DNS
-var host = "www.amazon.com";
+var host = 'ct.de';
 
 try {
     var dns = new uv.Dns();
-    print("Lookup : "+dns.lookup_sync(host));
-    print("Resolve : "+dns.resolve_sync(host));
+    print('Lookup : '+dns.lookup_sync(host));
+    print('Resolve : '+dns.resolve_sync(host));
+    print('Resolve IPv4 : '+dns.resolve_v4_sync(host));
+    print('Resolve IPv6 : '+dns.resolve_v6_sync(host));
 } catch(e){
-    print("Failed : ",e);
+    print('Failed : ',e);
 }
 
 uv.run();
