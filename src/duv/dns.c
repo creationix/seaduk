@@ -84,7 +84,7 @@ duk_ret_t duv_resolve_sync(duk_context *ctx) {
   return 1;
 }
 
-duk_ret_t duv_resolve_v6_sync(duk_context *ctx) {
+duk_ret_t duv_resolve6_sync(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"address", duk_is_string},
     {0,0}
@@ -123,7 +123,7 @@ duk_ret_t duv_resolve_v6_sync(duk_context *ctx) {
   return 1;
 }
 
-duk_ret_t duv_resolve_v4_sync(duk_context *ctx) {
+duk_ret_t duv_resolve4_sync(duk_context *ctx) {
   dschema_check(ctx, (const duv_schema_entry[]) {
     {"address", duk_is_string},
     {0,0}

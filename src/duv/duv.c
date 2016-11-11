@@ -62,8 +62,8 @@ static const duk_function_list_entry duv_async_methods[] = {
 static const duk_function_list_entry duv_dns_methods[] = {
   {"lookup_sync", duv_lookup_sync, 1},
   {"resolve_sync", duv_resolve_sync, 1},
-  {"resolve_v4_sync", duv_resolve_v4_sync, 1},
-  {"resolve_v6_sync", duv_resolve_v6_sync, 1},
+  {"resolve4_sync", duv_resolve4_sync, 1},
+  {"resolve6_sync", duv_resolve6_sync, 1},
   {0,0,0}
 };
 
