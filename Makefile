@@ -3,30 +3,41 @@
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
 #
+<<<<<<< HEAD
 UVSRC=git
+=======
+# UVSRC=system
+>>>>>>> 917d90f3db0a5c82c407ad6f48bdb4c5cdf8efcf
 #UVSRC=pkg-config
-#UVSRC=git
+UVSRC=git
 
 CC=cc
 
 #
 # Define buildtype : shared or static
 #
+<<<<<<< HEAD
 #BUILDTYPE=static
 BUILDTYPE=static
+=======
+BUILDTYPE=static
+# BUILDTYPE=shared
+>>>>>>> 917d90f3db0a5c82c407ad6f48bdb4c5cdf8efcf
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
-CFLAGS=-g
+# CFLAGS=-g
 # Uncomment the following to make a small binary
+<<<<<<< HEAD
 #CFLAGS=-Os
 # Uncomment the following to make a fast library
 #CFLAGS=-O3
+=======
+CFLAGS=-Os
+>>>>>>> 917d90f3db0a5c82c407ad6f48bdb4c5cdf8efcf
 # Uncomment the following to make a static musl binary on linux, set BUILTYPE to static
-#CFLAGS=-Os -static
-#CC=musl-gcc
-#BUILDTYPE=static
-#export CC
+CC=musl-gcc -static
+export CC
 
 # Set this to 'so' for linux/sun or to 'dylib' for MacOS
 SHAREDSUFFIX=so
@@ -41,11 +52,19 @@ LIBS=\
 	target/path.o\
 	target/miniz.o\
 	target/libduv.a\
+	target/mbed.a\
 	target/duktape.o
+
+MBED_LIBS=\
+	target/mbed_md5.o \
+  target/mbed_sha1.o\
+	target/mbed_sha256.o\
+	target/mbed_sha512.o
 
 DUV_LIBS=\
 	target/duv_loop.o\
 	target/duv_handle.o\
+	target/duv_req.o\
 	target/duv_timer.o\
 	target/duv_prepare.o\
 	target/duv_check.o\
@@ -84,6 +103,7 @@ SEADUK_PKGCONFIG=\
         seaduk.pc
 
 LIBUV=deps/libuv
+MBEDTLS=deps/mbedtls
 
 ifeq ($(BUILDTYPE), shared)
    CFLAGS+=-fPIC
@@ -102,11 +122,17 @@ endif
 ifeq ($(UVSRC), system)
    CFLAGS+=-I/usr/local/include
 endif
+CFLAGS+=-I${MBEDTLS}/include
 
 CFLAGS+=-Ideps/duktape-releases/src
 
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}
+
+tiny: target/nucleus
+	cp target/nucleus target/nucleus-tiny
+	strip target/nucleus-tiny
+	upx target/nucleus-tiny
 
 all-static: 	${UVTARGET} target/libduv.a target/nucleus
 
@@ -190,7 +216,7 @@ target/duktape.o: deps/duktape-releases/src/duktape.c deps/duktape-releases/src/
 target/miniz.o: deps/miniz.c
 	${CC} -std=gnu99 ${CFLAGS} -c $< -o $@
 
-target/libuv.a: ${LIBUV}/.libs/libuv.a 
+target/libuv.a: ${LIBUV}/.libs/libuv.a
 	cp $< $@
 
 target/libuv.${SHAREDSUFFIX}: ${LIBUV}/.libs/libuv.${SHAREDSUFFIX}
@@ -203,6 +229,12 @@ target/libduv.a: ${DUV_LIBS}
 target/duv_%.o: src/duv/%.c src/duv/%.h
 	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/libuv/include -o $@
 
+target/mbed.a: ${MBED_LIBS}
+	${AR} cr $@ ${MBED_LIBS}
+
+target/mbed_%.o: deps/mbedtls/library/%.c deps/mbedtls/include/mbedtls/%.h
+	${CC} -std=c99 ${CFLAGS} -D_POSIX_C_SOURCE=200112 -Wall -Wextra -pedantic -Werror -c $< -I./deps/mbedtls/include -o $@
+
 init-duktape:
 	git submodule init deps/duktape-releases
 	git submodule update deps/duktape-releases
@@ -213,8 +245,13 @@ init-libuv:
 
 ${LIBUV}/.libs/libuv.a: ${LIBUV}/Makefile
 	${MAKE} -C ${LIBUV}
+<<<<<<< HEAD
 	
 ${LIBUV}/.libs/libuv.${SHAREDSUFFIX}: ${LIBUV}/Makefile
+=======
+
+${LIBUV}/.libs/libuv.so: ${LIBUV}/Makefile
+>>>>>>> 917d90f3db0a5c82c407ad6f48bdb4c5cdf8efcf
 	${MAKE} -C ${LIBUV}
 
 ${LIBUV}/Makefile: ${LIBUV}/configure

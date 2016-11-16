@@ -17,7 +17,7 @@ BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
-CFLAGS=-g 
+CFLAGS=-g -I/usr/local/include
 # Uncomment the following to make a small binary
 #CFLAGS=-Os
 # Uncomment the following to make a fast library
@@ -75,6 +75,7 @@ DUV_LIBS=\
 	target/duv_dns.o\
 	target/duv_misc.o\
 	target/duv_duv.o\
+	target/duv_req.o\
 	target/duv_utils.o\
 	target/duv_callbacks.o\
 	target/duv_dschema.o
@@ -134,7 +135,7 @@ target/libduv.${SHAREDSUFFIX}: ${DUV_LIBS}
 	${CC} $^ ${LDFLAGS} ${CFLAGS} -shared -luv -o $@
 
 target/nucleus: ${BINS} ${LIBS}
-	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -luv -o $@
+	${CC} $^ ${LDFLAGS} ${CFLAGS} -lm -luv -lmbedtls -lmbedcrypto -o $@
 
 install-static: install-bin install-lib-static install-header install-seaduk-header
 install-shared : install-bin install-lib-shared install-header install-pkgconfig install-seaduk-header

@@ -1,6 +1,35 @@
 var p = nucleus.dofile("deps/utils.js").prettyPrint;
 var uv = nucleus.uv;
 
+function assert(condition, message) {
+    if (!condition) {
+        throw new Error(message || "Assertion failed")
+    }
+}
+
+print("\buv.getaddrinfo");
+uv.getaddrinfo({
+  node: "luvit.io",
+  socktype: "stream", // Only show TCP results
+  // family: "inet",  // Only show IPv4 results
+}, function (err, results) {
+  assert(!err, err);
+  p("Dns results for luvit.io", results);
+});
+uv.run();
+uv.getnameinfo({
+  ip: "::1",
+  family: "inet6",
+  port: 80,
+}, function (err, hostname, service) {
+  assert(!err, err);
+  p("localhost", hostname, service);
+  assert(hostname);
+  assert(service);
+});
+uv.run();
+
+
 print("\nTimer.prototype");
 p(uv.Timer.prototype);
 print("Handle.prototype (via Timer.prototype)");
@@ -132,6 +161,67 @@ timer.start(10, 0, function () {
 });
 uv.run();
 
+assert(typeof uv.version === 'function','misc not compiled in seaduk');
+
+var version = uv.version();
+var version_string = uv.version_string();
+p({
+    version: version,
+    version_string: version_string,
+});
+assert(typeof version === "number");
+assert(typeof version_string === "string");
+
+var rss = uv.resident_set_memory();
+var total = uv.get_total_memory();
+p({
+  rss: rss,
+  total: total
+});
+assert(rss < total);
+
+var uptime = uv.uptime();
+p({uptime: uptime});
+
+var rusage = uv.getrusage();
+p(rusage);
+
+var info = uv.cpu_info();
+p(info);
+
+var addresses = uv.interface_addresses();
+p(addresses);
+
+var avg = uv.loadavg();
+p({loadavg:avg});
+assert(avg.length === 3);
+
+var path = uv.exepath();
+p({exepath: path});
+
+var old = uv.cwd();
+uv.chdir("/");
+var cwd = uv.cwd();
+p({
+    original: old,
+    changed: cwd
+});
+assert(cwd !== old);
+uv.chdir(old);
+
+var old = uv.get_process_title();
+uv.set_process_title("Magic");
+var changed = uv.get_process_title();
+p({
+    original: old,
+    changed: changed,
+});
+assert(old !== changed);
+uv.set_process_title(old);
+
+var time = uv.hrtime();
+p({"hrtime": time});
+
 print("\nTesting TCP Server");
 var server = new uv.Tcp();
 server.bind("127.0.0.1", 8080);
@@ -227,4 +317,5 @@ ticker.close();
 prepare.close();
 check.close();
 idle.close();
+
 uv.run();

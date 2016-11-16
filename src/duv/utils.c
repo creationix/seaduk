@@ -35,6 +35,20 @@ const char* duv_protocol_to_string(int family) {
   return NULL;
 }
 
+const char* duv_req_type_to_string(uv_req_type type) {
+  switch (type) {
+    case UV_CONNECT: return "uv_connect_t";
+    case UV_WRITE: return "uv_write_t";
+    case UV_SHUTDOWN: return "uv_shutdown_t";
+    case UV_UDP_SEND: return "uv_udp_send_t";
+    case UV_FS: return "uv_fs_t";
+    case UV_WORK: return "uv_work_t";
+    case UV_GETADDRINFO: return "uv_getaddrinfo_t";
+    case UV_GETNAMEINFO: return "uv_getnameinfo_t";
+    default: return "uv_req_t";
+  }
+}
+
 const char* duv_type_to_string(duv_type_t type) {
   switch (type) {
     case DUV_TIMER: return "uv_timer_t";
@@ -53,7 +67,7 @@ const char* duv_type_to_string(duv_type_t type) {
     case DUV_FS_EVENT: return "uv_fs_event_t";
     case DUV_FS_POLL: return "uv_fs_poll_t";
   }
-  return "unknown";
+  return "uv_handle_t";
 }
 const char* duv_mask_to_string(duv_type_mask_t mask) {
   switch (mask) {
@@ -127,15 +141,21 @@ void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type) {
   handle->data = ctx;
 }
 
-void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
-  // Create a new container object for the request
+duk_ret_t duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
+  // Create a new container object for the request with request methods
   duk_push_object(ctx);
-  // TODO: should we have a shared prototype for uv_cancel_t and toString?
-  //       Currently these objects aren't exposed to the user.
+  duk_push_heap_stash(ctx);
+  duk_get_prop_string(ctx, -1, "req-prototype");
+  duk_remove(ctx, -2);
+  duk_set_prototype(ctx, -2);
 
   // Set buffer as uv-data internal property.
   duk_insert(ctx, -2);
   duk_put_prop_string(ctx, -2, "\xff""uv-data");
+
+  // Store the request type.
+  duk_push_int(ctx, req->type);
+  duk_put_prop_string(ctx, -2, "\xff""req-type");
 
   // Store a reference to the lua callback
   duk_dup(ctx, callback);
@@ -148,6 +168,9 @@ void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback) {
 
   // Store the context in the handle so it can use duktape APIs.
   req->data = ctx;
+
+  // TODO: is this still on the stack?
+  return 1;
 }
 
 void duv_store_handle(duk_context *ctx, void *handle) {

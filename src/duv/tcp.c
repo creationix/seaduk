@@ -136,6 +136,5 @@ duk_ret_t duv_tcp_connect(duk_context *ctx) {
     duk_error(ctx, DUK_ERR_TYPE_ERROR, "Invalid IP address or port");
   }
   duv_check(ctx, uv_tcp_connect(req, tcp, (struct sockaddr*)&addr, duv_on_connect));
-  duv_setup_request(ctx, (uv_req_t*)req, 3);
-  return 0;
+  return duv_setup_request(ctx, (uv_req_t*)req, 3);
 }

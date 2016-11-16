@@ -16,12 +16,116 @@
 #include "duv/duv.h"
 #include "env.h"
 #include "path.h"
+#include <mbedtls/md5.h>
+#include <mbedtls/sha1.h>
+#include <mbedtls/sha256.h>
+#include <mbedtls/sha512.h>
 
 enum build_mode {
   BUILD_LINKED,
   BUILD_ZIP,
   BUILD_EMBEDDED
 };
+
+static duk_ret_t nucleus_md5(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  uint8_t* hash = duk_push_fixed_buffer(ctx, 16);
+  mbedtls_md5((uint8_t*)buf.base, buf.len, hash);
+  return 1;
+}
+
+static duk_ret_t nucleus_sha1(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  uint8_t* hash = duk_push_fixed_buffer(ctx, 20);
+  mbedtls_sha1((uint8_t*)buf.base, buf.len, hash);
+  return 1;
+}
+
+static duk_ret_t nucleus_sha256(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  uint8_t* hash = duk_push_fixed_buffer(ctx, 32);
+  mbedtls_sha256((uint8_t*)buf.base, buf.len, hash, false);
+  return 1;
+}
+
+static duk_ret_t nucleus_sha512(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  uv_buf_t buf;
+  duv_get_data(ctx, 0, &buf);
+  uint8_t* hash = duk_push_fixed_buffer(ctx, 64);
+  mbedtls_sha512((uint8_t*)buf.base, buf.len, hash, false);
+  return 1;
+}
+
+static duk_ret_t nucleus_mask(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {"mask", dschema_is_data},
+    {0,0}
+  });
+  uv_buf_t data, mask;
+  duv_get_data(ctx, 0, &data);
+  duv_get_data(ctx, 1, &mask);
+  uint8_t* out = duk_push_fixed_buffer(ctx, data.len);
+  for (size_t i = 0; i < data.len; i++) {
+    out[i] = data.base[i] ^ mask.base[i % mask.len];
+  }
+  return 1;
+}
+
+static duk_ret_t nucleus_hex_encode(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  duk_hex_encode(ctx, 0);
+  return 1;
+}
+
+static duk_ret_t nucleus_hex_decode(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"hex", duk_is_string},
+    {0,0}
+  });
+  duk_hex_decode(ctx, 0);
+  return 1;
+}
+
+static duk_ret_t nucleus_base64_encode(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"data", dschema_is_data},
+    {0,0}
+  });
+  duk_base64_encode(ctx, 0);
+  return 1;
+}
+
+static duk_ret_t nucleus_base64_decode(duk_context *ctx) {
+  dschema_check(ctx, (const duv_schema_entry[]) {
+    {"base64", duk_is_string},
+    {0,0}
+  });
+  duk_base64_decode(ctx, 0);
+  return 1;
+}
 
 
 static duk_ret_t nucleus_exit(duk_context *ctx) {
@@ -251,6 +355,15 @@ static const duk_function_list_entry nucleus_functions[] = {
   {"scandir", nucleus_scandir, 2},
   {"dofile", nucleus_dofile, 1},
   {"pathjoin", duv_path_join, DUK_VARARGS},
+  {"md5", nucleus_md5, 1},
+  {"sha1", nucleus_sha1, 1},
+  {"sha256", nucleus_sha256, 1},
+  {"sha512", nucleus_sha512, 1},
+  {"mask", nucleus_mask, 2},
+  {"hexEncode", nucleus_hex_encode, 1},
+  {"hexDecode", nucleus_hex_decode, 1},
+  {"base64Encode", nucleus_base64_encode, 1},
+  {"base64Decode", nucleus_base64_decode, 1},
   {0,0,0}
 };
 

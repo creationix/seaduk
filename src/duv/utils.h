@@ -6,6 +6,7 @@
 
 const char* duv_protocol_to_string(int family);
 
+const char* duv_req_type_to_string(uv_req_type type);
 const char* duv_type_to_string(duv_type_t type);
 const char* duv_mask_to_string(duv_type_mask_t mask);
 
@@ -23,7 +24,7 @@ void duv_check(duk_context *ctx, int status);
 void duv_setup_handle(duk_context *ctx, uv_handle_t *handle, duv_type_t type);
 
 // Assumes buffer is at top of stack.
-void duv_setup_request(duk_context *ctx, uv_req_t* req, int callback);
+duk_ret_t duv_setup_request(duk_context *ctx, uv_req_t* req, int callback);
 
 // Store copy of value on top of stack using handle for key
 void duv_store_handle(duk_context *ctx, void *handle);

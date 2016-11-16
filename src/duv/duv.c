@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "loop.h"
 #include "handle.h"
+#include "req.h"
 #include "timer.h"
 #include "prepare.h"
 #include "check.h"
@@ -14,6 +15,15 @@
 #include "pipe.h"
 #include "tty.h"
 #include "misc.h"
+#include "fs.h"
+#include "dns.h"
+
+static const duk_function_list_entry duv_req_methods[] = {
+  {"inspect", duv_req_tostring, 0},
+  {"toString", duv_req_tostring, 0},
+  {"cancel", duv_cancel, 0},
+  {0,0,0}
+};
 
 static const duk_function_list_entry duv_handle_methods[] = {
   {"inspect", duv_tostring, 0},
@@ -140,38 +150,37 @@ static const duk_function_list_entry duv_funcs[] = {
 
   {"ttyResetMode", duv_tty_reset_mode, 0},
 
-  // // fs.c
-  // {"fs_close", duv_fs_close, 2},
-  // {"fs_open", duv_fs_open, 4},
-  // {"fs_read", duv_fs_read, 4},
-  // {"fs_unlink", duv_fs_unlink, 2},
-  // {"fs_write", duv_fs_write, 4},
-  // {"fs_mkdir", duv_fs_mkdir, 3},
-  // {"fs_mkdtemp", duv_fs_mkdtemp, 2},
-  // {"fs_rmdir", duv_fs_rmdir, 2},
-  // {"fs_scandir", duv_fs_scandir, 2},
-  // {"fs_scandir_next", duv_fs_scandir_next, 1},
-  // {"fs_stat", duv_fs_stat, 2},
-  // {"fs_fstat", duv_fs_fstat, 2},
-  // {"fs_lstat", duv_fs_lstat, 2},
-  // {"fs_rename", duv_fs_rename, 3},
-  // {"fs_fsync", duv_fs_fsync, 2},
-  // {"fs_fdatasync", duv_fs_fdatasync, 2},
-  // {"fs_ftruncate", duv_fs_ftruncate, 3},
-  // {"fs_sendfile", duv_fs_sendfile, 5},
-  // {"fs_access", duv_fs_access, 3},
-  // {"fs_chmod", duv_fs_chmod, 3},
-  // {"fs_fchmod", duv_fs_fchmod, 3},
-  // {"fs_utime", duv_fs_utime, 4},
-  // {"fs_futime", duv_fs_futime, 4},
-  // {"fs_link", duv_fs_link, 3},
-  // {"fs_symlink", duv_fs_symlink, 4},
-  // {"fs_readlink", duv_fs_readlink, 2},
-  // {"fs_chown", duv_fs_chown, 4},
-  // {"fs_fchown", duv_fs_fchown, 4},
-  //
-  // // misc.c
-  // {"guess_handle", duv_guess_handle, 1},
+  // fs.c
+  {"fs_close", duv_fs_close, 2},
+  {"fs_open", duv_fs_open, 4},
+  {"fs_read", duv_fs_read, 4},
+  {"fs_unlink", duv_fs_unlink, 2},
+  {"fs_write", duv_fs_write, 4},
+  {"fs_mkdir", duv_fs_mkdir, 3},
+  {"fs_mkdtemp", duv_fs_mkdtemp, 2},
+  {"fs_rmdir", duv_fs_rmdir, 2},
+  {"fs_scandir", duv_fs_scandir, 2},
+  {"fs_stat", duv_fs_stat, 2},
+  {"fs_fstat", duv_fs_fstat, 2},
+  {"fs_lstat", duv_fs_lstat, 2},
+  {"fs_rename", duv_fs_rename, 3},
+  {"fs_fsync", duv_fs_fsync, 2},
+  {"fs_fdatasync", duv_fs_fdatasync, 2},
+  {"fs_ftruncate", duv_fs_ftruncate, 3},
+  {"fs_sendfile", duv_fs_sendfile, 5},
+  {"fs_access", duv_fs_access, 3},
+  {"fs_chmod", duv_fs_chmod, 3},
+  {"fs_fchmod", duv_fs_fchmod, 3},
+  {"fs_utime", duv_fs_utime, 4},
+  {"fs_futime", duv_fs_futime, 4},
+  {"fs_link", duv_fs_link, 3},
+  {"fs_symlink", duv_fs_symlink, 4},
+  {"fs_readlink", duv_fs_readlink, 2},
+  {"fs_chown", duv_fs_chown, 4},
+  {"fs_fchown", duv_fs_fchown, 4},
+
+  // misc.c
+  {"guess_handle", duv_guess_handle, 1},
   {"version", duv_version, 0},
   {"version_string", duv_version_string, 0},
   {"get_process_title", duv_get_process_title, 0},
@@ -185,13 +194,16 @@ static const duk_function_list_entry duv_funcs[] = {
   {"exepath", duv_exepath, 0},
   {"cwd", duv_cwd, 0},
   {"os_homedir", duv_os_homedir, 0},
+  {"chdir", duv_chdir, 1},
   {"get_total_memory", duv_get_total_memory, 0},
   {"hrtime", duv_hrtime, 0},
   {"update_time", duv_update_time, 0},
   {"now", duv_now, 0},
   {"chdir", duv_chdir, 1},
   {"argv", duv_argv, 0},
-  //
+  {"getaddrinfo", duv_getaddrinfo, 2},
+  {"getnameinfo", duv_getnameinfo, 2},
+
   // // miniz.c
   // {"inflate", duv_tinfl, 2},
   // {"deflate", duv_tdefl, 2},
@@ -208,6 +220,13 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_put_function_list(ctx, -1, duv_funcs);
 
   // stack: nucleus uv
+
+  // uv.Req.prototype
+  duk_push_heap_stash(ctx);
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_req_methods);
+  duk_put_prop_string(ctx, -2, "req-prototype");
+  duk_pop(ctx);
 
   // uv.Handle.prototype
   duk_push_object(ctx);
