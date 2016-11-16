@@ -10,6 +10,8 @@
 #include "async.h"
 #include "stream.h"
 #include "tcp.h"
+#include "dns.h"
+#include "udp.h"
 #include "pipe.h"
 #include "tty.h"
 #include "misc.h"
@@ -67,6 +69,14 @@ static const duk_function_list_entry duv_async_methods[] = {
   {0,0,0}
 };
 
+static const duk_function_list_entry duv_dns_methods[] = {
+  {"lookup_sync", duv_lookup_sync, 1},
+  {"resolve_sync", duv_resolve_sync, 1},
+  {"resolve4_sync", duv_resolve4_sync, 1},
+  {"resolve6_sync", duv_resolve6_sync, 1},
+  {0,0,0}
+};
+
 static const duk_function_list_entry duv_stream_methods[] = {
   {"shutdown", duv_shutdown, 1},
   {"listen", duv_listen, 2},
@@ -89,6 +99,17 @@ static const duk_function_list_entry duv_tcp_methods[] = {
   {"getpeername", duv_tcp_getpeername, 0},
   {"getsockname", duv_tcp_getsockname, 0},
   {"connect", duv_tcp_connect, 3},
+  {0,0,0}
+};
+
+static const duk_function_list_entry duv_udp_methods[] = {
+  {"bind", duv_udp_bind, 2},
+  {"send", duv_udp_send, 4},
+  {"readStart", duv_udp_recv_start, 1},
+  {"readStop", duv_udp_recv_stop, 0},
+  {"broadcast", duv_udp_broadcast, 1},
+  {"getsockname", duv_udp_getsockname, 0},
+  {"setTtl", duv_udp_set_ttl, 1},
   {0,0,0}
 };
 
@@ -122,6 +143,8 @@ static const duk_function_list_entry duv_funcs[] = {
   {"Idle", duv_new_idle, 0},
   {"Async", duv_new_async, 1},
   {"Tcp", duv_new_tcp, 0},
+  {"Udp", duv_new_udp, 0},
+  {"Dns", duv_new_dns, 0},
   {"Pipe", duv_new_pipe, 1},
   {"Tty", duv_new_tty, 2},
 
@@ -176,9 +199,8 @@ static const duk_function_list_entry duv_funcs[] = {
   {"hrtime", duv_hrtime, 0},
   {"update_time", duv_update_time, 0},
   {"now", duv_now, 0},
+  {"chdir", duv_chdir, 1},
   {"argv", duv_argv, 0},
-
-  // dns.c
   {"getaddrinfo", duv_getaddrinfo, 2},
   {"getnameinfo", duv_getnameinfo, 2},
 
@@ -265,6 +287,15 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_put_prop_string(ctx, -2, "prototype");
   duk_pop(ctx);
 
+  // uv.DNS.prototype
+  duk_get_prop_string(ctx, -2, "Dns");
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_dns_methods);
+  duk_dup(ctx, -3);
+  duk_set_prototype(ctx, -2);
+  duk_put_prop_string(ctx, -2, "prototype");
+  duk_pop(ctx);
+
   // stack: nucleus uv Handle.prototype
 
   // uv.Stream.prototype
@@ -274,6 +305,15 @@ duk_ret_t duv_push_module(duk_context *ctx) {
   duk_set_prototype(ctx, -2);
 
   // stack: nucleus uv Handle.prototype Stream.prototype
+
+  // uv.Udp.prototype
+  duk_get_prop_string(ctx, -3, "Udp");
+  duk_push_object(ctx);
+  duk_put_function_list(ctx, -1, duv_udp_methods);
+  duk_dup(ctx, -3);
+  duk_set_prototype(ctx, -2);
+  duk_put_prop_string(ctx, -2, "prototype");
+  duk_pop(ctx);
 
   // uv.Tcp.prototype
   duk_get_prop_string(ctx, -3, "Tcp");

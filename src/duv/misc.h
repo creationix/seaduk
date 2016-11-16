@@ -1,6 +1,5 @@
-#ifndef MISC_H
-#define MISC_H
-
+#ifndef DUV_MISC_H
+#define DUV_MISC_H
 #include "duv.h"
 #include "misc.h"
 #include "dschema.h"

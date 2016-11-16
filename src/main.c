@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "../deps/duktape-releases/src/duktape.h"
+#include <duktape.h>
 #define MINIZ_HEADER_FILE_ONLY
 #include "../deps/miniz.c"
 #include "duv/duv.h"
