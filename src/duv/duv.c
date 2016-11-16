@@ -14,6 +14,7 @@
 #include "tty.h"
 #include "misc.h"
 #include "fs.h"
+#include "dns.h"
 
 static const duk_function_list_entry duv_req_methods[] = {
   {"inspect", duv_req_tostring, 0},
@@ -176,6 +177,10 @@ static const duk_function_list_entry duv_funcs[] = {
   {"update_time", duv_update_time, 0},
   {"now", duv_now, 0},
   {"argv", duv_argv, 0},
+
+  // dns.c
+  {"getaddrinfo", duv_getaddrinfo, 2},
+  {"getnameinfo", duv_getnameinfo, 2},
 
   // // miniz.c
   // {"inflate", duv_tinfl, 2},
