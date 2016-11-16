@@ -3,28 +3,26 @@
 # Set LIBUV to system to use the version deployed in the system
 # Set LIBUV to pkgconfig to use pkg-config for the setup
 #
-UVSRC=system
+# UVSRC=system
 #UVSRC=pkg-config
-#UVSRC=git
+UVSRC=git
 
 CC=cc
 
 #
 # Define buildtype : shared or static
 #
-#BUILDTYPE=static
-BUILDTYPE=shared
+BUILDTYPE=static
+# BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
-CFLAGS=-g
+# CFLAGS=-g
 # Uncomment the following to make a small binary
-#CFLAGS=-Os
+CFLAGS=-Os
 # Uncomment the following to make a static musl binary on linux, set BUILTYPE to static
-#CFLAGS=-Os -static
-#CC=musl-gcc
-#BUILDTYPE=static
-#export CC
+CC=musl-gcc -static
+export CC
 
 LDFLAGS+=-L/usr/local/lib -Ltarget -luv
 
