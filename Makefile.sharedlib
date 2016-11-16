@@ -17,7 +17,7 @@ BUILDTYPE=shared
 
 # Make sure to `make distclean` before building when changing CC.
 # Default build is debug mode.
-CFLAGS=-g -I/usr/local/include
+CFLAGS=-g
 # Uncomment the following to make a small binary
 #CFLAGS=-Os
 # Uncomment the following to make a fast library
@@ -139,6 +139,8 @@ target/nucleus: ${BINS} ${LIBS}
 
 install-static: install-bin install-lib-static install-header install-seaduk-header
 install-shared : install-bin install-lib-shared install-header install-pkgconfig install-seaduk-header
+install-static-nobin : install-lib-static install-header install-seaduk-header
+install-shared-nobin : install-lib-shared install-header install-pkgconfig install-seaduk-header
 
 install-bin: target/nucleus
 	install $< /usr/local/bin/
