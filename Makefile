@@ -93,6 +93,11 @@ endif
 all:		all-${BUILDTYPE}
 install:	install-${BUILDTYPE}
 
+tiny: target/nucleus
+	cp target/nucleus target/nucleus-tiny
+	strip target/nucleus-tiny
+	upx target/nucleus-tiny
+
 all-static: 	${UVTARGET} target/libduv.a target/nucleus
 
 all-shared: 	${UVTARGET} lib-shared target/nucleus
