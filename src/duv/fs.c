@@ -155,7 +155,6 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
         duk_push_string(ctx, ent.name);
         const char* type;
         switch (ent.type) {
-          case UV_DIRENT_UNKNOWN: type = "unknown"; break;
           case UV_DIRENT_FILE:    type = "file";   break;
           case UV_DIRENT_DIR:     type = "directory";    break;
           case UV_DIRENT_LINK:    type = "link";   break;
@@ -163,6 +162,7 @@ static void duv_push_fs_result(duk_context *ctx, uv_fs_t* req) {
           case UV_DIRENT_SOCKET:  type = "socket"; break;
           case UV_DIRENT_CHAR:    type = "char";   break;
           case UV_DIRENT_BLOCK:   type = "block";  break;
+          default: type = "unknown"; break;
         }
         duk_push_string(ctx, type);
         duk_put_prop(ctx, -3);
