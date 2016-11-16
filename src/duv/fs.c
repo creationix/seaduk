@@ -191,12 +191,6 @@ static void duv_fs_cb(uv_fs_t* req) {
   }
 
   duv_resolve((uv_req_t*)req, nargs);
-
-  // duv_fulfill_req(ctx, (uv_req_t*)req, nargs);
-  // if (req->fs_type != UV_FS_SCANDIR) {
-  //   req->data = duv_cleanup_req(ctx, req->data);
-  //   uv_fs_req_cleanup(req);
-  // }
 }
 
 #define FS_CALL(func, cb, save, extra, req, ...) {      \

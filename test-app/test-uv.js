@@ -7,6 +7,29 @@ function assert(condition, message) {
     }
 }
 
+print("\buv.getaddrinfo");
+uv.getaddrinfo({
+  node: "luvit.io",
+  socktype: "stream", // Only show TCP results
+  // family: "inet",  // Only show IPv4 results
+}, function (err, results) {
+  assert(!err, err);
+  p("Dns results for luvit.io", results);
+});
+uv.run();
+uv.getnameinfo({
+  ip: "::1",
+  family: "inet6",
+  port: 80,
+}, function (err, hostname, service) {
+  assert(!err, err);
+  p("localhost", hostname, service);
+  assert(hostname);
+  assert(service);
+});
+uv.run();
+
+
 print("\nTimer.prototype");
 p(uv.Timer.prototype);
 print("Handle.prototype (via Timer.prototype)");
@@ -294,4 +317,5 @@ ticker.close();
 prepare.close();
 check.close();
 idle.close();
+
 uv.run();
