@@ -1,7 +1,11 @@
 #include "dschema.h"
 
 duk_bool_t dschema_is_data(duk_context* ctx, duk_idx_t index) {
+#if (DUK_VERSION >= 10700)
+  return duk_is_string(ctx, index) || duk_is_buffer_data(ctx, index);
+#else
   return duk_is_string(ctx, index) || duk_is_buffer(ctx, index);
+#endif
 }
 
 duk_bool_t dschema_is_fd(duk_context* ctx, duk_idx_t index) {
